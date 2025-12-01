@@ -1,3 +1,4 @@
+// CLI text manipulation utilities
 package utils
 
 import (

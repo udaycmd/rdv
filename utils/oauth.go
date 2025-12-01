@@ -1,3 +1,4 @@
+// OAuth management utility functions
 package utils
 
 import (

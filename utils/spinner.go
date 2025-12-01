@@ -1,3 +1,4 @@
+// CLI progress spinner
 package utils
 
 import (
@@ -5,7 +6,7 @@ import (
 	"time"
 )
 
-func Spinner[T any](fn func() (T, error), message string) (T, error) {
+func Spinner[T any](worker func() (T, error), message string) (T, error) {
 	done := make(chan any)
 
 	go func() {
@@ -24,7 +25,7 @@ func Spinner[T any](fn func() (T, error), message string) (T, error) {
 		}
 	}()
 
-	res, err := fn()
+	res, err := worker()
 	done <- res
 	return res, err
 }

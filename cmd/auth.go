@@ -29,11 +29,15 @@ var authCmd = &cobra.Command{
 				utils.ExitOnError(err.Error())
 			}
 
-			err = os.Remove(utils.TokenFilePath)
-			if err != nil {
+			if err := os.Remove(utils.TokenFilePath); err != nil {
 				utils.ExitOnError(err.Error())
 			}
 			utils.ExitOnSuccess("User auth session revoked successfully!")
+		}
+
+		err := auth()
+		if err != nil {
+			utils.ExitOnSuccess("Working!!!")
 		}
 	},
 }
