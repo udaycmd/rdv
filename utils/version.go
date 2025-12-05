@@ -1,4 +1,7 @@
-// 'rdv' semantic version
+// 'rdv' semantic version and commit info
 package utils
 
-const Version string = "0.1.0"
+var (
+	Version string
+	Commit  string
+)

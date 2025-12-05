@@ -1,6 +1,6 @@
 package main
 
-import "github.com/udayfs/rdv/cmd"
+import "github.com/udaycmd/rdv/cmd"
 
 func main() {
 	cmd.Execute()

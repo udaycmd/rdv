@@ -1,4 +1,4 @@
-module github.com/udayfs/rdv
+module github.com/udaycmd/rdv
 
 go 1.25.0
 
