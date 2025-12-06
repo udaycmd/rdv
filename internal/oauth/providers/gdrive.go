@@ -7,9 +7,13 @@ import (
 	"google.golang.org/api/drive/v3"
 )
 
-type GdriveAuthProvider struct{}
+type gdriveAuthProvider struct{}
 
-func (g *GdriveAuthProvider) GetCfg() *oauth.BaseConfig {
+func NewGdriveAuthProvider() *gdriveAuthProvider {
+	return &gdriveAuthProvider{}
+}
+
+func (g *gdriveAuthProvider) GetCfg() *oauth.BaseConfig {
 	return &oauth.BaseConfig{
 		Name:     "gdrive",
 		ClientId: "593200518603-k0ptna6taq593eiulqnd4vfsk1djh0vl.apps.googleusercontent.com",
@@ -19,6 +23,10 @@ func (g *GdriveAuthProvider) GetCfg() *oauth.BaseConfig {
 	}
 }
 
-func (g *GdriveAuthProvider) GetInfo() {
+func (g *gdriveAuthProvider) GetInfo() {
 	utils.Log(utils.Info, "Selected Drive client: %s, Client Id: %s", g.GetCfg().Name, g.GetCfg().ClientId)
+}
+
+func (g *gdriveAuthProvider) Revoke() error {
+	return nil
 }

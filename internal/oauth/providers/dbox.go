@@ -6,14 +6,18 @@ import (
 	"golang.org/x/oauth2"
 )
 
-type DboxAuthProvider struct{}
+type dboxAuthProvider struct{}
 
 var dboxEndpoint = oauth2.Endpoint{
 	AuthURL:  "https://www.dropbox.com/oauth2/authorize",
 	TokenURL: "https://api.dropboxapi.com/oauth2/token",
 }
 
-func (g *DboxAuthProvider) GetCfg() *oauth.BaseConfig {
+func NewDboxAuthProvider() *dboxAuthProvider {
+	return &dboxAuthProvider{}
+}
+
+func (g *dboxAuthProvider) GetCfg() *oauth.BaseConfig {
 	return &oauth.BaseConfig{
 		Name:     "dbox",
 		ClientId: "2qnotffuu8vx1z7",
@@ -21,6 +25,10 @@ func (g *DboxAuthProvider) GetCfg() *oauth.BaseConfig {
 	}
 }
 
-func (d *DboxAuthProvider) GetInfo() {
+func (d *dboxAuthProvider) GetInfo() {
 	utils.Log(utils.Info, "Selected Drive client: %s, Client Id: %s", d.GetCfg().Name, d.GetCfg().ClientId)
+}
+
+func (d *dboxAuthProvider) Revoke() error {
+	return nil
 }

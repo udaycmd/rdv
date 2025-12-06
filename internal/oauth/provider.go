@@ -15,4 +15,5 @@ type BaseConfig struct {
 type OauthProvider interface {
 	GetInfo()
 	GetCfg() *BaseConfig
+	Revoke() error
 }

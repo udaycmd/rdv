@@ -2,31 +2,39 @@ package internal
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
+	"os/user"
 	"path/filepath"
 
 	"github.com/udaycmd/rdv/utils"
-	"golang.org/x/oauth2"
+)
+
+type driveStatus int
+
+const (
+	Default driveStatus = iota
+	Selected
+	Revoked
 )
 
 var (
 	RdvConfFileName string = ".rdv.conf"
-	RdvConfFilePath string = filepath.Join(homeDir(), RdvConfFileName)
+	RdvConfFilePath string = filepath.Join(getHomeDir(), RdvConfFileName)
+	RdvUserId       string = getUserId()
 )
 
 type DriveProviderConfig struct {
-	Name string        `json:"name"`
-	Id   string        `json:"client_id"`
-	T    *oauth2.Token `json:"token"`
+	Name   string      `json:"name"`
+	Id     string      `json:"client_id"`
+	Status driveStatus `json:"status"`
 }
 
-type RdvCfg struct {
+type RdvConfig struct {
 	Ver    string                `json:"ver"`    // cli version
-	Drives []DriveProviderConfig `json:"drives"` // drives configuration
+	Drives []DriveProviderConfig `json:"drives"` // configuration for each drive
 }
 
-func homeDir() string {
+func getHomeDir() string {
 	res, err := os.UserHomeDir()
 	if err != nil {
 		utils.ExitOnError("%s", err.Error())
@@ -34,27 +42,35 @@ func homeDir() string {
 	return res
 }
 
-func LoadCfg() (*RdvCfg, error) {
-	data, err := os.ReadFile(RdvConfFilePath)
+func getUserId() string {
+	u, err := user.Current()
+	if err != nil {
+		utils.ExitOnError("%s", err.Error())
+	}
+	return u.Uid
+}
+
+func LoadCfg() (*RdvConfig, error) {
+	f, err := os.ReadFile(RdvConfFilePath)
 	if os.IsNotExist(err) {
-		return &RdvCfg{Ver: utils.Version, Drives: []DriveProviderConfig{}}, nil
+		return &RdvConfig{Ver: utils.Version, Drives: []DriveProviderConfig{}}, nil
 	} else if err != nil {
 		return nil, err
 	}
 
-	cfg := &RdvCfg{}
-	if err := json.Unmarshal(data, cfg); err != nil {
+	cfg := &RdvConfig{}
+	if err := json.Unmarshal(f, cfg); err != nil {
 		return nil, err
 	}
 
 	return cfg, nil
 }
 
-func (c *RdvCfg) SaveCfg() error {
-	data, err := json.MarshalIndent(c, "", "  ")
+func (c *RdvConfig) SaveCfg() error {
+	s, err := json.MarshalIndent(c, "", "  ")
 	if err != nil {
-		return fmt.Errorf("failed to serialize configuration data: %w", err)
+		return err
 	}
 
-	return os.WriteFile(RdvConfFilePath, data, 0600)
+	return os.WriteFile(RdvConfFilePath, s, 0600)
 }

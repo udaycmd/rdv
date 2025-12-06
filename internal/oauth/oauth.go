@@ -43,7 +43,7 @@ func pkce() (string, string, error) {
 	return codeVerifier, codeChallenge, nil
 }
 
-func Authorize(op OauthProvider) (*http.Client, error) {
+func Authorize(op OauthProvider) error {
 	bc := op.GetCfg()
 	oConf := &oauth2.Config{
 		ClientID:     bc.ClientId,
@@ -55,12 +55,12 @@ func Authorize(op OauthProvider) (*http.Client, error) {
 
 	code_verifier, code_challenge, err := pkce()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	state, err := genRandomBytes(16)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	authURL := oConf.AuthCodeURL(
@@ -70,7 +70,7 @@ func Authorize(op OauthProvider) (*http.Client, error) {
 		oauth2.SetAuthURLParam("code_challenge_method", "S256"))
 
 	if err := utils.OpenURL(authURL); err != nil {
-		return nil, err
+		return err
 	}
 
 	codeChn := make(chan string)
@@ -98,8 +98,8 @@ func Authorize(op OauthProvider) (*http.Client, error) {
 		oauth2.SetAuthURLParam("code_verifier", code_verifier),
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return oConf.Client(context.Background(), token), nil
+	return SetToken(op, token)
 }

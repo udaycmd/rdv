@@ -2,44 +2,42 @@
 package oauth
 
 import (
-	"fmt"
+	"encoding/json"
 
 	"github.com/udaycmd/rdv/internal"
+	"github.com/zalando/go-keyring"
 	"golang.org/x/oauth2"
 )
 
 func GetToken(p OauthProvider) (*oauth2.Token, error) {
-	cfg, err := internal.LoadCfg()
+	key, err := keyring.Get(p.GetCfg().ClientId, internal.RdvUserId)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, d := range cfg.Drives {
-		if d.Name == p.GetCfg().Name {
-			return d.T, nil
-		}
+	t := &oauth2.Token{}
+	if err := json.Unmarshal([]byte(key), t); err != nil {
+		return nil, err
 	}
 
-	return nil, fmt.Errorf("unknown oauth provider")
+	return t, nil
 }
 
 func SetToken(p OauthProvider, t *oauth2.Token) error {
-	cfg, err := internal.LoadCfg()
+	key, err := json.Marshal(t)
 	if err != nil {
 		return err
 	}
 
-	for _, d := range cfg.Drives {
-		if d.Name == p.GetCfg().Name {
-			d.T = t
-			return cfg.SaveCfg()
-		}
-	}
-
-	return fmt.Errorf("unknown oauth provider")
+	return keyring.Set(p.GetCfg().ClientId, internal.RdvUserId, string(key))
 }
 
-// TODO
-func Revoke(p OauthProvider) error {
-	return nil
+func RevokeToken(p OauthProvider) error {
+	// server side cleanup
+	err := p.Revoke()
+	if err != nil {
+		return err
+	}
+
+	return keyring.Delete(p.GetCfg().ClientId, internal.RdvUserId)
 }
