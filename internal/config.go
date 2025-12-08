@@ -67,7 +67,7 @@ func LoadCfg() (*RdvConfig, error) {
 }
 
 func (d *DriveProviderConfig) GetInfo() {
-	utils.Log(utils.Info, "Selected Drive client: %s, Client Id: %s", d.Name, d.Id)
+	utils.Log(utils.Info, "Selected drive provider: %s, cient-id: %s", d.Name, d.Id)
 }
 
 func (c *RdvConfig) SaveCfg() error {
