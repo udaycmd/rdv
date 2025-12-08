@@ -13,7 +13,6 @@ type BaseConfig struct {
 
 // High level contract that should be implemented by every Oauth2 provider
 type OauthProvider interface {
-	GetInfo()
 	GetCfg() *BaseConfig
 	Revoke() error
 }

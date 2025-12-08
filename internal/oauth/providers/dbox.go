@@ -2,7 +2,6 @@ package providers
 
 import (
 	"github.com/udaycmd/rdv/internal/oauth"
-	"github.com/udaycmd/rdv/utils"
 	"golang.org/x/oauth2"
 )
 
@@ -23,10 +22,6 @@ func (g *dboxAuthProvider) GetCfg() *oauth.BaseConfig {
 		ClientId: "2qnotffuu8vx1z7",
 		Ep:       dboxEndpoint,
 	}
-}
-
-func (d *dboxAuthProvider) GetInfo() {
-	utils.Log(utils.Info, "Selected Drive client: %s, Client Id: %s", d.GetCfg().Name, d.GetCfg().ClientId)
 }
 
 func (d *dboxAuthProvider) Revoke() error {

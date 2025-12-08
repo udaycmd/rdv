@@ -13,6 +13,7 @@ import (
 var (
 	add    string
 	remove string
+	show   bool
 )
 
 var driveCmd = &cobra.Command{
@@ -20,12 +21,10 @@ var driveCmd = &cobra.Command{
 	Short: "add or remove a remote drive",
 	Long:  "add or remove a remote drive",
 	PreRun: func(cmd *cobra.Command, args []string) {
-		if add == remove {
-			if add == "" {
-				utils.ExitOnError("must provide at least one of the flags for the command")
-			} else {
-				utils.ExitOnError("cannot add and remove the same drive")
-			}
+		if add == "" && remove == "" && !show {
+			utils.ExitOnError("must provide at least one of the flags for the command")
+		} else if add == remove && add != "" {
+			utils.ExitOnError("cannot add and remove the same drive")
 		}
 	},
 	Run: func(cmd *cobra.Command, args []string) {
@@ -34,9 +33,23 @@ var driveCmd = &cobra.Command{
 			utils.ExitOnError("%s", err.Error())
 		}
 
+		showMe := func() {
+			utils.Log(utils.Info, "Supported drives:")
+			for _, d := range drives.SupportedDrives {
+				fmt.Printf("- %s\n", d.GetCfg().Name)
+			}
+
+			for _, d := range cfg.Drives {
+				if d.Status == internal.Selected {
+					d.GetInfo()
+				}
+			}
+		}
+
 		if add != "" {
 			err := driveAdd(add, cfg)
 			if err != nil {
+				showMe()
 				utils.ExitOnError("%s", err.Error())
 			}
 
@@ -50,6 +63,10 @@ var driveCmd = &cobra.Command{
 			}
 
 			utils.Log(utils.Success, "Removed %s successfully", remove)
+		}
+
+		if show {
+			showMe()
 		}
 	},
 }
@@ -113,4 +130,5 @@ func init() {
 	rootCmd.AddCommand(driveCmd)
 	driveCmd.Flags().StringVarP(&add, "add", "a", "", "drive to add")
 	driveCmd.Flags().StringVarP(&remove, "remove", "r", "", "drive to remove")
+	driveCmd.Flags().BoolVarP(&show, "show", "s", false, "show supported drives")
 }

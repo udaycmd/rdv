@@ -2,7 +2,6 @@ package providers
 
 import (
 	"github.com/udaycmd/rdv/internal/oauth"
-	"github.com/udaycmd/rdv/utils"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/drive/v3"
 )
@@ -21,10 +20,6 @@ func (g *gdriveAuthProvider) GetCfg() *oauth.BaseConfig {
 		Scopes:   []string{drive.DriveScope},
 		Ep:       google.Endpoint,
 	}
-}
-
-func (g *gdriveAuthProvider) GetInfo() {
-	utils.Log(utils.Info, "Selected Drive client: %s, Client Id: %s", g.GetCfg().Name, g.GetCfg().ClientId)
 }
 
 func (g *gdriveAuthProvider) Revoke() error {

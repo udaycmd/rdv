@@ -66,6 +66,10 @@ func LoadCfg() (*RdvConfig, error) {
 	return cfg, nil
 }
 
+func (d *DriveProviderConfig) GetInfo() {
+	utils.Log(utils.Info, "Selected Drive client: %s, Client Id: %s", d.Name, d.Id)
+}
+
 func (c *RdvConfig) SaveCfg() error {
 	s, err := json.MarshalIndent(c, "", "  ")
 	if err != nil {
