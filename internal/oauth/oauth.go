@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	"github.com/udaycmd/rdv/utils"
+	// "github.com/zalando/go-keyring"
 	"golang.org/x/oauth2"
 )
 
@@ -66,6 +67,7 @@ func Authorize(op OauthProvider) error {
 	authURL := oConf.AuthCodeURL(
 		state,
 		oauth2.AccessTypeOffline,
+		oauth2.SetAuthURLParam("token_access_type", "offline"),
 		oauth2.SetAuthURLParam("code_challenge", code_challenge),
 		oauth2.SetAuthURLParam("code_challenge_method", "S256"))
 
@@ -86,7 +88,7 @@ func Authorize(op OauthProvider) error {
 			return
 		}
 
-		fmt.Fprintln(w, "Authorization successful! You can close this window now.")
+		fmt.Fprintln(w, "Authorization successfull! You can close this window now.")
 		codeChn <- code
 	})
 

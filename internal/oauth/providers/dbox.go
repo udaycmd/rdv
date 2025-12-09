@@ -1,7 +1,12 @@
 package providers
 
 import (
+	"encoding/json"
+	"net/http"
+
+	"github.com/udaycmd/rdv/internal"
 	"github.com/udaycmd/rdv/internal/oauth"
+	"github.com/zalando/go-keyring"
 	"golang.org/x/oauth2"
 )
 
@@ -25,5 +30,28 @@ func (g *dboxAuthProvider) GetCfg() *oauth.BaseConfig {
 }
 
 func (d *dboxAuthProvider) Revoke() error {
-	return nil
+	key, err := keyring.Get(d.GetCfg().ClientId, internal.RdvUserId)
+	if err != nil {
+		return err
+	}
+
+	t := &oauth2.Token{}
+	if err := json.Unmarshal([]byte(key), t); err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("POST", "https://api.dropboxapi.com/2/auth/token/revoke", nil)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+t.AccessToken)
+	client := &http.Client{}
+
+	res, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	return res.Body.Close()
 }
