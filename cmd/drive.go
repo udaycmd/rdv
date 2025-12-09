@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/udaycmd/rdv/internal"
@@ -122,37 +123,62 @@ func driveRemove(dn string, c *internal.RdvConfig) error {
 }
 
 func useDrive(c *internal.RdvConfig) error {
-	if len(c.Drives) == 0 {
-		return fmt.Errorf("No drives added")
-	} else if len(c.Drives) == 1 {
-		c.Drives[0].Status = internal.Selected
+	switch len(c.Drives) {
+	case 0:
+		return fmt.Errorf("no connected drives found")
+	case 1:
+		if c.Drives[0].Status == internal.Revoked {
+			utils.Log(utils.Info, "A disconnected drive is found:")
+			c.Drives[0].GetInfo()
 
-		err := c.SaveCfg()
-		if err != nil {
-			return err
+			utils.Log(utils.Info, "Would you like to connect to it again? (y/n):")
+			choice := ""
+			fmt.Scanln(&choice)
+
+			if strings.ToLower(choice) == "y" {
+				c.Drives[0].Status = internal.Selected
+
+				err := c.SaveCfg()
+				if err != nil {
+					return err
+				}
+			}
+
+			utils.Log(utils.Success, "Ok")
+		} else {
+			c.Drives[0].Status = internal.Selected
+
+			err := c.SaveCfg()
+			if err != nil {
+				return err
+			}
+
+			utils.Log(utils.Success, "Automatically selected the sole drive")
 		}
 
-		utils.Log(utils.Success, "Automatically selected the sole drive")
 		return nil
 	}
 
 	utils.Log(utils.Info, "Select one of the configured drive")
 	i := 0
-	choice := 0
 	for {
 		if i == len(c.Drives) {
 			break
 		}
 
-		if c.Drives[i].Status == internal.Selected {
-			fmt.Printf("%s (%d) *active\n", c.Drives[i].Name, i+1)
-		} else {
+		switch c.Drives[i].Status {
+		case internal.Default:
 			fmt.Printf("%s (%d)\n", c.Drives[i].Name, i+1)
+		case internal.Selected:
+			fmt.Printf("%s (%d) *active\n", c.Drives[i].Name, i+1)
+		case internal.Revoked:
+			fmt.Printf("%s (%d) *disconnected\n", c.Drives[i].Name, i+1)
 		}
 
 		i++
 	}
 
+	choice := 0
 	utils.Log(utils.Info, "Specify your choice (1 - %d)", i)
 	_, err := fmt.Scanln(&choice)
 	if err != nil {
@@ -160,7 +186,7 @@ func useDrive(c *internal.RdvConfig) error {
 	}
 
 	if choice > i || choice < 1 {
-		return fmt.Errorf("Invalid choice")
+		return fmt.Errorf("invalid choice")
 	}
 
 	c.Drives[choice-1].Status = internal.Selected
