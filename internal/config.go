@@ -2,6 +2,7 @@ package internal
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -66,8 +67,8 @@ func LoadCfg() (*RdvConfig, error) {
 	return cfg, nil
 }
 
-func (d *DriveProviderConfig) GetInfo() {
-	utils.Log(utils.Info, "Provider: %s, Id: %s", d.Name, d.Id)
+func (d *DriveProviderConfig) GetInfo() string {
+	return fmt.Sprintf("{ provider: %s, id: %s }", d.Name, d.Id)
 }
 
 func (c *RdvConfig) SaveCfg() error {

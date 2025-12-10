@@ -2,6 +2,7 @@ package providers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/udaycmd/rdv/internal"
@@ -21,7 +22,7 @@ func NewDboxAuthProvider() *dboxAuthProvider {
 	return &dboxAuthProvider{}
 }
 
-func (g *dboxAuthProvider) GetCfg() *oauth.BaseConfig {
+func (g *dboxAuthProvider) GetConfig() *oauth.BaseConfig {
 	return &oauth.BaseConfig{
 		Name:     "dbox",
 		ClientId: "2qnotffuu8vx1z7",
@@ -30,7 +31,7 @@ func (g *dboxAuthProvider) GetCfg() *oauth.BaseConfig {
 }
 
 func (d *dboxAuthProvider) Revoke() error {
-	key, err := keyring.Get(d.GetCfg().ClientId, internal.RdvUserId)
+	key, err := keyring.Get(d.GetConfig().ClientId, internal.RdvUserId)
 	if err != nil {
 		return err
 	}
@@ -51,6 +52,10 @@ func (d *dboxAuthProvider) Revoke() error {
 	res, err := client.Do(req)
 	if err != nil {
 		return err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed to revoke token, %s", res.Status)
 	}
 
 	return res.Body.Close()

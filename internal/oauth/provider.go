@@ -1,6 +1,8 @@
 package oauth
 
-import "golang.org/x/oauth2"
+import (
+	"golang.org/x/oauth2"
+)
 
 // Basic configuration for any Oauth2 provider
 type BaseConfig struct {
@@ -13,6 +15,6 @@ type BaseConfig struct {
 
 // High level contract that should be implemented by every Oauth2 provider
 type OauthProvider interface {
-	GetCfg() *BaseConfig
+	GetConfig() *BaseConfig
 	Revoke() error
 }

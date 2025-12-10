@@ -5,9 +5,19 @@ import (
 	"github.com/udaycmd/rdv/internal/oauth/providers"
 )
 
-var SupportedDrives = []oauth.OauthProvider{
+var SupportedDriveProviders = []oauth.OauthProvider{
 	providers.NewGdriveAuthProvider(),
 	providers.NewDboxAuthProvider(),
+}
+
+func GetDriveOauthProvider(name string) oauth.OauthProvider {
+	for _, p := range SupportedDriveProviders {
+		if p.GetConfig().Name == name {
+			return p
+		}
+	}
+
+	return nil
 }
 
 type Drive interface {

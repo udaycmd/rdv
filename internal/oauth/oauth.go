@@ -10,7 +10,6 @@ import (
 	"net/http"
 
 	"github.com/udaycmd/rdv/utils"
-	// "github.com/zalando/go-keyring"
 	"golang.org/x/oauth2"
 )
 
@@ -45,8 +44,8 @@ func pkce() (string, string, error) {
 }
 
 func Authorize(op OauthProvider) error {
-	bc := op.GetCfg()
-	oConf := &oauth2.Config{
+	bc := op.GetConfig()
+	oauthConfig := &oauth2.Config{
 		ClientID:     bc.ClientId,
 		ClientSecret: bc.Secret,
 		Endpoint:     bc.Ep,
@@ -64,7 +63,7 @@ func Authorize(op OauthProvider) error {
 		return err
 	}
 
-	authURL := oConf.AuthCodeURL(
+	authURL := oauthConfig.AuthCodeURL(
 		state,
 		oauth2.AccessTypeOffline,
 		oauth2.SetAuthURLParam("token_access_type", "offline"),
@@ -96,12 +95,12 @@ func Authorize(op OauthProvider) error {
 	code := <-codeChn
 
 	// exchange with pkce
-	token, err := oConf.Exchange(context.Background(), code,
+	token, err := oauthConfig.Exchange(context.Background(), code,
 		oauth2.SetAuthURLParam("code_verifier", code_verifier),
 	)
 	if err != nil {
 		return err
 	}
 
-	return SetToken(op, token)
+	return SetToken(bc.ClientId, token)
 }
