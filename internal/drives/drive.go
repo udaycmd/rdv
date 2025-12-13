@@ -21,6 +21,10 @@ func GetDriveOauthProvider(name string) oauth.OauthProvider {
 }
 
 type Drive interface {
+	// View the contents of a directory,
+	// if id is empty string then root directory of the drive is selected
+	View(id string) error
+
 	// Get/download an object with an id
 	// from the chosen drive
 	Get(id string) error

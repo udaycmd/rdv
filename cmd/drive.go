@@ -9,6 +9,7 @@ import (
 	"github.com/udaycmd/rdv/internal/drives"
 	"github.com/udaycmd/rdv/internal/oauth"
 	"github.com/udaycmd/rdv/utils"
+	"github.com/zalando/go-keyring"
 )
 
 var (
@@ -38,7 +39,6 @@ var driveCmd = &cobra.Command{
 		if add != "" {
 			err := driveAdd(add, cfg)
 			if err != nil {
-				listDrives(cfg)
 				utils.ExitOnError("%s", err.Error())
 			}
 
@@ -126,7 +126,13 @@ func driveRevoke(dn string, c *internal.RdvConfig) error {
 		}
 	}
 
-	return fmt.Errorf("%s is not linked with rdv", dn)
+	// If token is present in keyring but configuration is empty
+	err := oauth.RevokeToken(drives.GetDriveOauthProvider(dn))
+	if err == keyring.ErrNotFound {
+		return fmt.Errorf("%s is not linked with rdv", dn)
+	}
+
+	return err
 }
 
 func useDrive(c *internal.RdvConfig) error {
@@ -135,8 +141,7 @@ func useDrive(c *internal.RdvConfig) error {
 		return fmt.Errorf("no connected drives found")
 	case 1:
 		if c.Drives[0].Status == internal.Revoked {
-			utils.Log(utils.Info, "a disconnected drive is found:")
-			c.Drives[0].GetInfo()
+			utils.Log(utils.Info, "a disconnected drive is found: %s", c.Drives[0].GetInfo())
 
 			utils.Log(utils.Info, "would you like to connect to it again? (y/n):")
 			choice := ""
@@ -223,20 +228,20 @@ func useDrive(c *internal.RdvConfig) error {
 func listDrives(c *internal.RdvConfig) {
 	utils.Log(utils.Info, "supported drives:")
 	for _, d := range drives.SupportedDriveProviders {
-		fmt.Printf("  |> %s\n", d.GetConfig().Name)
+		fmt.Printf("%s\n", d.GetConfig().Name)
 	}
 
 	for _, d := range c.Drives {
 		if d.Status == internal.Selected {
-			utils.Log(utils.Info, "active drive :: %s", d.GetInfo())
+			utils.Log(utils.Info, "active drive: %s", d.GetInfo())
 		}
 	}
 }
 
 func init() {
-	rootCmd.AddCommand(driveCmd)
 	driveCmd.Flags().StringVarP(&add, "add", "a", "", "link a remote drive to rdv")
 	driveCmd.Flags().StringVarP(&revoke, "revoke", "r", "", "disconnects the drive's client from rdv, but not the drive itself")
 	driveCmd.Flags().BoolVarP(&use, "use", "u", false, "use a linked drive")
 	driveCmd.Flags().BoolVarP(&list, "list", "l", false, "list supported drives")
+	rootCmd.AddCommand(driveCmd)
 }

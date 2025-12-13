@@ -26,8 +26,8 @@ func (g *gdriveAuthProvider) GetConfig() *oauth.BaseConfig {
 		Name:     "gdrive",
 		ClientId: "593200518603-k0ptna6taq593eiulqnd4vfsk1djh0vl.apps.googleusercontent.com",
 		Secret:   "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",
-		Scopes: []string{drive.DriveScope},
-		Ep:     google.Endpoint,
+		Scopes:   []string{drive.DriveScope},
+		Ep:       google.Endpoint,
 	}
 }
 

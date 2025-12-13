@@ -18,7 +18,7 @@ func Spinner[T any](worker func() (T, error), message string) (T, error) {
 				fmt.Println()
 				return
 			default:
-				fmt.Printf("\r\033[K%s%s ... %s", Colorize(Gray, "[Info] "), message, frames[i%len(frames)])
+				Log(Info, "\r%s ... %s", message, frames[i%len(frames)])
 				time.Sleep(50 * time.Millisecond)
 				i++
 			}
