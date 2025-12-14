@@ -68,7 +68,7 @@ func LoadCfg() (*RdvConfig, error) {
 }
 
 func (d *DriveProviderConfig) GetInfo() string {
-	return fmt.Sprintf("[ provider: %s, id: %s ]", d.Name, d.Id)
+	return fmt.Sprintf("%s, id: %s", d.Name, d.Id)
 }
 
 func (c *RdvConfig) SaveCfg() error {

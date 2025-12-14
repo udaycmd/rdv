@@ -1,4 +1,3 @@
-// Simple CLI logging utilities
 package utils
 
 import (

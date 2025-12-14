@@ -42,7 +42,7 @@ var driveCmd = &cobra.Command{
 				utils.ExitOnError("%s", err.Error())
 			}
 
-			utils.Log(utils.Success, "added %s successfully", add)
+			utils.Log(utils.Success, "Added %s successfully", add)
 		}
 
 		if revoke != "" {
@@ -51,7 +51,7 @@ var driveCmd = &cobra.Command{
 				utils.ExitOnError("%s", err.Error())
 			}
 
-			utils.Log(utils.Success, "removed %s successfully", revoke)
+			utils.Log(utils.Success, "Removed %s successfully", revoke)
 		}
 
 		if use {
@@ -72,7 +72,7 @@ func driveAdd(dn string, c *internal.RdvConfig) error {
 		if d.Name == dn {
 			switch d.Status {
 			case internal.Revoked:
-				utils.Log(utils.Info, "reconnecting with %s", d.Name)
+				utils.Log(utils.Info, "Reconnecting with %s", d.Name)
 
 				if err := oauth.Authorize(drives.GetDriveOauthProvider(d.Name)); err != nil {
 					return err
@@ -141,9 +141,9 @@ func useDrive(c *internal.RdvConfig) error {
 		return fmt.Errorf("no connected drives found")
 	case 1:
 		if c.Drives[0].Status == internal.Revoked {
-			utils.Log(utils.Info, "a disconnected drive is found: %s", c.Drives[0].GetInfo())
+			utils.Log(utils.Info, "A disconnected drive is found: %s", c.Drives[0].GetInfo())
 
-			utils.Log(utils.Info, "would you like to connect to it again? (y/n):")
+			utils.Log(utils.Info, "Would you like to connect to it again? (y/n):")
 			choice := ""
 			fmt.Scanln(&choice)
 
@@ -168,13 +168,13 @@ func useDrive(c *internal.RdvConfig) error {
 				return err
 			}
 
-			utils.Log(utils.Success, "automatically selected the sole drive")
+			utils.Log(utils.Success, "Automatically selected the sole drive")
 		}
 
 		return nil
 	}
 
-	utils.Log(utils.Info, "select one of the configured drive")
+	utils.Log(utils.Info, "Select one of the configured drive")
 	i := 0
 	for {
 		if i == len(c.Drives) {
@@ -194,7 +194,7 @@ func useDrive(c *internal.RdvConfig) error {
 	}
 
 	choice := 0
-	utils.Log(utils.Info, "specify your choice (1 - %d)", i)
+	utils.Log(utils.Info, "Specify your choice (1 - %d)", i)
 	_, err := fmt.Scanln(&choice)
 	if err != nil {
 		return err
@@ -221,19 +221,19 @@ func useDrive(c *internal.RdvConfig) error {
 		return err
 	}
 
-	utils.Log(utils.Success, "now using %s", c.Drives[choice-1].Name)
+	utils.Log(utils.Success, "Now using %s", c.Drives[choice-1].Name)
 	return nil
 }
 
 func listDrives(c *internal.RdvConfig) {
-	utils.Log(utils.Info, "supported drives:")
+	utils.Log(utils.Info, "Supported drives:")
 	for _, d := range drives.SupportedDriveProviders {
-		fmt.Printf("%s\n", d.GetConfig().Name)
+		fmt.Printf("/> %s\n", d.GetConfig().Name)
 	}
 
 	for _, d := range c.Drives {
 		if d.Status == internal.Selected {
-			utils.Log(utils.Info, "active drive: %s", d.GetInfo())
+			utils.Log(utils.Info, "Active drive: %s", d.GetInfo())
 		}
 	}
 }

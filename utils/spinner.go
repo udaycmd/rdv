@@ -1,4 +1,3 @@
-// CLI progress spinner
 package utils
 
 import (
@@ -7,25 +6,37 @@ import (
 )
 
 func Spinner[T any](worker func() (T, error), message string) (T, error) {
-	done := make(chan any)
+	stop := make(chan struct{})
+	stopped := make(chan struct{})
 
 	go func() {
+		defer close(stopped)
+
 		frames := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+		ticker := time.NewTicker(50 * time.Millisecond)
+		defer ticker.Stop()
+
+		// hide and show cursor on exit
+		fmt.Print("\033[?25l")
+		defer fmt.Print("\033[?25h")
 		i := 0
 		for {
 			select {
-			case <-done:
-				fmt.Println()
+			case <-stop:
+				fmt.Print("\033[2K\r")
 				return
-			default:
-				Log(Info, "\r%s ... %s", message, frames[i%len(frames)])
-				time.Sleep(50 * time.Millisecond)
+			case <-ticker.C:
+				fmt.Printf("\r%s %s", frames[i%len(frames)], message)
 				i++
 			}
 		}
 	}()
 
 	res, err := worker()
-	done <- res
+	close(stop)
+
+	// prevents immediate return
+	<-stopped
+
 	return res, err
 }

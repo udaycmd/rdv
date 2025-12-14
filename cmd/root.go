@@ -1,8 +1,14 @@
 package cmd
 
 import (
+	"time"
+
 	"github.com/spf13/cobra"
 	"github.com/udaycmd/rdv/utils"
+)
+
+const (
+	RequestTimeoutPeriod = 8 * time.Second
 )
 
 var rootCmd = &cobra.Command{
