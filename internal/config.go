@@ -79,3 +79,13 @@ func (c *RdvConfig) SaveCfg() error {
 
 	return os.WriteFile(RdvConfFilePath, s, 0600)
 }
+
+func (c *RdvConfig) GetSelectedDrive() *DriveProviderConfig {
+	for i := range c.Drives {
+		if c.Drives[i].Status == Selected {
+			return &c.Drives[i]
+		}
+	}
+
+	return nil
+}

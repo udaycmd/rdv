@@ -4,11 +4,13 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/udaycmd/rdv/internal"
 	"github.com/udaycmd/rdv/utils"
 )
 
-const (
-	RequestTimeoutPeriod = 8 * time.Second
+var (
+	RequestTimeoutPeriod                     = 12 * time.Second
+	Config               *internal.RdvConfig = nil
 )
 
 var rootCmd = &cobra.Command{

@@ -29,15 +29,16 @@ var driveCmd = &cobra.Command{
 		} else if add == revoke && add != "" {
 			utils.ExitOnError("cannot add and remove the same drive")
 		}
-	},
-	Run: func(cmd *cobra.Command, args []string) {
-		cfg, err := internal.LoadCfg()
+
+		var err error
+		Config, err = internal.LoadCfg()
 		if err != nil {
 			utils.ExitOnError("%s", err.Error())
 		}
-
+	},
+	Run: func(cmd *cobra.Command, args []string) {
 		if add != "" {
-			err := driveAdd(add, cfg)
+			err := driveAdd(add, Config)
 			if err != nil {
 				utils.ExitOnError("%s", err.Error())
 			}
@@ -46,7 +47,7 @@ var driveCmd = &cobra.Command{
 		}
 
 		if revoke != "" {
-			err := driveRevoke(revoke, cfg)
+			err := driveRevoke(revoke, Config)
 			if err != nil {
 				utils.ExitOnError("%s", err.Error())
 			}
@@ -55,14 +56,14 @@ var driveCmd = &cobra.Command{
 		}
 
 		if use {
-			err := useDrive(cfg)
+			err := useDrive(Config)
 			if err != nil {
 				utils.ExitOnError("%s", err.Error())
 			}
 		}
 
 		if list {
-			listDrives(cfg)
+			listDrives(Config)
 		}
 	},
 }
@@ -231,10 +232,9 @@ func listDrives(c *internal.RdvConfig) {
 		fmt.Printf("/> %s\n", d.GetConfig().Name)
 	}
 
-	for _, d := range c.Drives {
-		if d.Status == internal.Selected {
-			utils.Log(utils.Info, "Active drive: %s", d.GetInfo())
-		}
+	d := c.GetSelectedDrive()
+	if d != nil {
+		utils.Log(utils.Info, "Active drive: %s", d.GetInfo())
 	}
 }
 
