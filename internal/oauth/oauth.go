@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/udaycmd/rdv/internal/oauth/providers"
 	"github.com/udaycmd/rdv/utils"
 	"golang.org/x/oauth2"
 )
@@ -43,15 +44,9 @@ func pkce() (string, string, error) {
 	return codeVerifier, codeChallenge, nil
 }
 
-func Authorize(op OauthProvider) error {
-	bc := op.GetConfig()
-	oauthConfig := &oauth2.Config{
-		ClientID:     bc.ClientId,
-		ClientSecret: bc.Secret,
-		Endpoint:     bc.Ep,
-		RedirectURL:  authRedirectURL,
-		Scopes:       bc.Scopes,
-	}
+func Authorize(op providers.OauthProvider) error {
+	config := op.GetConfig()
+	config.RedirectURL = authRedirectURL
 
 	code_verifier, code_challenge, err := pkce()
 	if err != nil {
@@ -63,7 +58,7 @@ func Authorize(op OauthProvider) error {
 		return err
 	}
 
-	authURL := oauthConfig.AuthCodeURL(
+	authURL := config.AuthCodeURL(
 		state,
 		oauth2.AccessTypeOffline,
 		oauth2.SetAuthURLParam("token_access_type", "offline"),
@@ -95,12 +90,12 @@ func Authorize(op OauthProvider) error {
 	code := <-codeChn
 
 	// exchange with pkce
-	token, err := oauthConfig.Exchange(context.Background(), code,
+	token, err := config.Exchange(context.Background(), code,
 		oauth2.SetAuthURLParam("code_verifier", code_verifier),
 	)
 	if err != nil {
 		return err
 	}
 
-	return SetToken(bc.ClientId, token)
+	return SetToken(config.ClientID, token)
 }

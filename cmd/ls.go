@@ -6,7 +6,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/udaycmd/rdv/internal"
 	"github.com/udaycmd/rdv/internal/drives"
-	"github.com/udaycmd/rdv/internal/oauth"
 	"github.com/udaycmd/rdv/utils"
 )
 
@@ -26,21 +25,23 @@ var lsCmd = &cobra.Command{
 		if err != nil {
 			utils.ExitOnError("%s", err.Error())
 		}
-
+	},
+	Run: func(cmd *cobra.Command, args []string) {
+		var err error
 		d := Config.GetSelectedDrive()
 		if d == nil {
 			utils.ExitOnError("No seleted drive found!")
 		}
 
-		t, err := oauth.GetToken(d.Id)
+		ctx, cancel := context.WithTimeout(context.Background(), RequestTimeoutPeriod)
+		defer cancel()
+
+		drive, err := drives.NewDriveFromProvider(ctx, d.Name)
 		if err != nil {
 			utils.ExitOnError("%s", err.Error())
 		}
 
-		_ = t
-	},
-	Run: func(cmd *cobra.Command, args []string) {
-		err := ls(nil, dir)
+		err = ls(drive, dir)
 		if err != nil {
 			utils.ExitOnError("%s", err.Error())
 		}
@@ -48,12 +49,13 @@ var lsCmd = &cobra.Command{
 }
 
 func ls(drive drives.Drive, id string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), RequestTimeoutPeriod)
-	defer cancel()
-
-	_, err := drive.View(ctx, id)
+	filesMeta, err := drive.View(id)
 	if err != nil {
 		return err
+	}
+
+	for _, fm := range filesMeta {
+		utils.Log(utils.Success, "id: %s", fm.Name)
 	}
 
 	return nil

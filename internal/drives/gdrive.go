@@ -1,12 +1,10 @@
-package api
+package drives
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"time"
 
-	"github.com/udaycmd/rdv/internal/drives"
 	"google.golang.org/api/drive/v3"
 	"google.golang.org/api/googleapi"
 )
@@ -19,20 +17,20 @@ func NewGdrive(srv *drive.Service) *Gdrive {
 	return &Gdrive{service: srv}
 }
 
-func (g *Gdrive) View(ctx context.Context, id string) ([]drives.Meta, error) {
+func (g *Gdrive) View(id string) ([]Meta, error) {
 	if id == "" {
 		id = "root"
 	}
 
 	q := fmt.Sprintf("'%s' in parents and trashed = false", id)
-	call := g.service.Files.List().Q(q).Fields("files(id, name, size, mimeType, modifiedTime)").Context(ctx)
+	call := g.service.Files.List().Q(q).Fields("files(id, name, size, mimeType, modifiedTime)")
 
 	resp, err := call.Do()
 	if err != nil {
 		return nil, fmt.Errorf("gdrive ls: %w", err)
 	}
 
-	var meta []drives.Meta
+	var meta []Meta
 	for _, f := range resp.Files {
 
 		modTime, err := time.Parse(time.RFC3339, f.ModifiedTime)
@@ -40,7 +38,7 @@ func (g *Gdrive) View(ctx context.Context, id string) ([]drives.Meta, error) {
 			return nil, err
 		}
 
-		meta = append(meta, drives.Meta{
+		meta = append(meta, Meta{
 			Id:           f.Id,
 			Name:         f.Name,
 			Size:         f.Size,
@@ -53,8 +51,8 @@ func (g *Gdrive) View(ctx context.Context, id string) ([]drives.Meta, error) {
 	return meta, nil
 }
 
-func (g *Gdrive) Get(ctx context.Context, id string) (io.ReadCloser, error) {
-	resp, err := g.service.Files.Get(id).Context(ctx).Download()
+func (g *Gdrive) Get(id string) (io.ReadCloser, error) {
+	resp, err := g.service.Files.Get(id).Download()
 	if err != nil {
 		return nil, fmt.Errorf("gdrive get: %w", err)
 	}
@@ -62,7 +60,7 @@ func (g *Gdrive) Get(ctx context.Context, id string) (io.ReadCloser, error) {
 	return resp.Body, nil
 }
 
-func (g *Gdrive) Put(ctx context.Context, r io.Reader, parentId string, name string) (*drives.Meta, error) {
+func (g *Gdrive) Put(r io.Reader, parentId string, name string) (*Meta, error) {
 	file := &drive.File{
 		Name:    name,
 		Parents: []string{parentId},
@@ -70,7 +68,7 @@ func (g *Gdrive) Put(ctx context.Context, r io.Reader, parentId string, name str
 
 	call := g.service.Files.Create(file).
 		Media(r, googleapi.ChunkSize(16*1024*1024)).
-		Context(ctx).Fields("id, name, size, mimeType, modifiedTime").
+		Fields("id, name, size, mimeType, modifiedTime").
 		ProgressUpdater(func(current, total int64) {})
 
 	resp, err := call.Do()
@@ -83,7 +81,7 @@ func (g *Gdrive) Put(ctx context.Context, r io.Reader, parentId string, name str
 		return nil, err
 	}
 
-	return &drives.Meta{
+	return &Meta{
 		Id:           resp.Id,
 		Name:         resp.Name,
 		Size:         resp.Size,
@@ -91,4 +89,12 @@ func (g *Gdrive) Put(ctx context.Context, r io.Reader, parentId string, name str
 		LastModified: modTime,
 		IsDir:        resp.MimeType == "application/vnd.google-apps.folder",
 	}, nil
+}
+
+func (g *Gdrive) Delete(id string) error {
+	return nil
+}
+
+func (g *Gdrive) MkDir(parentId string, name string) (*Meta, error) {
+	return nil, nil
 }

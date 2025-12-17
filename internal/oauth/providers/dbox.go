@@ -6,12 +6,13 @@ import (
 	"net/http"
 
 	"github.com/udaycmd/rdv/internal"
-	"github.com/udaycmd/rdv/internal/oauth"
 	"github.com/zalando/go-keyring"
 	"golang.org/x/oauth2"
 )
 
-type dboxAuthProvider struct{}
+type dboxAuthProvider struct {
+	name string
+}
 
 var dboxEndpoint = oauth2.Endpoint{
 	AuthURL:  "https://www.dropbox.com/oauth2/authorize",
@@ -19,19 +20,22 @@ var dboxEndpoint = oauth2.Endpoint{
 }
 
 func NewDboxAuthProvider() *dboxAuthProvider {
-	return &dboxAuthProvider{}
+	return &dboxAuthProvider{"dbox"}
 }
 
-func (g *dboxAuthProvider) GetConfig() *oauth.BaseConfig {
-	return &oauth.BaseConfig{
-		Name:     "dbox",
-		ClientId: "2qnotffuu8vx1z7",
-		Ep:       dboxEndpoint,
+func (d *dboxAuthProvider) Name() string {
+	return d.name
+}
+
+func (d *dboxAuthProvider) GetConfig() *oauth2.Config {
+	return &oauth2.Config{
+		ClientID: "2qnotffuu8vx1z7",
+		Endpoint: dboxEndpoint,
 	}
 }
 
 func (d *dboxAuthProvider) Revoke() error {
-	key, err := keyring.Get(d.GetConfig().ClientId, internal.RdvUserId)
+	key, err := keyring.Get(d.GetConfig().ClientID, internal.RdvUserId)
 	if err != nil {
 		return err
 	}

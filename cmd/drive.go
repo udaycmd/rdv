@@ -95,8 +95,8 @@ func driveAdd(dn string, c *internal.RdvConfig) error {
 	config := p.GetConfig()
 	c.Drives = append(c.Drives,
 		internal.DriveProviderConfig{
-			Name:   config.Name,
-			Id:     config.ClientId,
+			Name:   p.Name(),
+			Id:     config.ClientID,
 			Status: internal.Default,
 		})
 
@@ -228,8 +228,8 @@ func useDrive(c *internal.RdvConfig) error {
 
 func listDrives(c *internal.RdvConfig) {
 	utils.Log(utils.Info, "Supported drives:")
-	for _, d := range drives.SupportedDriveProviders {
-		fmt.Printf("/> %s\n", d.GetConfig().Name)
+	for _, p := range drives.SupportedDriveProviders {
+		fmt.Printf("/> %s\n", p.Name())
 	}
 
 	d := c.GetSelectedDrive()

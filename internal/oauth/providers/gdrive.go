@@ -8,31 +8,35 @@ import (
 	"strings"
 
 	"github.com/udaycmd/rdv/internal"
-	"github.com/udaycmd/rdv/internal/oauth"
 	"github.com/zalando/go-keyring"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/drive/v3"
 )
 
-type gdriveAuthProvider struct{}
-
-func NewGdriveAuthProvider() *gdriveAuthProvider {
-	return &gdriveAuthProvider{}
+type gdriveAuthProvider struct {
+	name string
 }
 
-func (g *gdriveAuthProvider) GetConfig() *oauth.BaseConfig {
-	return &oauth.BaseConfig{
-		Name:     "gdrive",
-		ClientId: "593200518603-k0ptna6taq593eiulqnd4vfsk1djh0vl.apps.googleusercontent.com",
-		Secret:   "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",
-		Scopes:   []string{drive.DriveScope},
-		Ep:       google.Endpoint,
+func NewGdriveAuthProvider() *gdriveAuthProvider {
+	return &gdriveAuthProvider{"gdrive"}
+}
+
+func (g *gdriveAuthProvider) Name() string {
+	return g.name
+}
+
+func (g *gdriveAuthProvider) GetConfig() *oauth2.Config {
+	return &oauth2.Config{
+		ClientID:     "593200518603-k0ptna6taq593eiulqnd4vfsk1djh0vl.apps.googleusercontent.com",
+		ClientSecret: "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",
+		Endpoint:     google.Endpoint,
+		Scopes:       []string{drive.DriveScope},
 	}
 }
 
 func (g *gdriveAuthProvider) Revoke() error {
-	key, err := keyring.Get(g.GetConfig().ClientId, internal.RdvUserId)
+	key, err := keyring.Get(g.GetConfig().ClientID, internal.RdvUserId)
 	if err != nil {
 		return err
 	}

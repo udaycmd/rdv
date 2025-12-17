@@ -19,7 +19,7 @@ const (
 )
 
 var (
-	RdvConfFileName string = ".rdv.conf"
+	RdvConfFileName string = ".rdv.conf.json"
 	RdvConfFilePath string = filepath.Join(getHomeDir(), RdvConfFileName)
 	RdvUserId       string = getUserId()
 )

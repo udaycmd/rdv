@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 
 	"github.com/udaycmd/rdv/internal"
+	"github.com/udaycmd/rdv/internal/oauth/providers"
 	"github.com/zalando/go-keyring"
 	"golang.org/x/oauth2"
 )
@@ -32,12 +33,12 @@ func SetToken(id string, t *oauth2.Token) error {
 	return keyring.Set(id, internal.RdvUserId, string(key))
 }
 
-func RevokeToken(p OauthProvider) error {
+func RevokeToken(p providers.OauthProvider) error {
 	// server side cleanup
 	err := p.Revoke()
 	if err != nil {
 		return err
 	}
 
-	return keyring.Delete(p.GetConfig().ClientId, internal.RdvUserId)
+	return keyring.Delete(p.GetConfig().ClientID, internal.RdvUserId)
 }
