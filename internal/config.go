@@ -2,6 +2,7 @@ package internal
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -18,7 +19,7 @@ const (
 )
 
 var (
-	RdvConfFileName string = ".rdv.conf"
+	RdvConfFileName string = ".rdv.conf.json"
 	RdvConfFilePath string = filepath.Join(getHomeDir(), RdvConfFileName)
 	RdvUserId       string = getUserId()
 )
@@ -37,7 +38,7 @@ type RdvConfig struct {
 func getHomeDir() string {
 	res, err := os.UserHomeDir()
 	if err != nil {
-		utils.ExitOnError("%s", err.Error())
+		utils.ExitOnError("%s\n", err.Error())
 	}
 	return res
 }
@@ -45,7 +46,7 @@ func getHomeDir() string {
 func getUserId() string {
 	u, err := user.Current()
 	if err != nil {
-		utils.ExitOnError("%s", err.Error())
+		utils.ExitOnError("%s\n", err.Error())
 	}
 	return u.Uid
 }
@@ -66,8 +67,8 @@ func LoadCfg() (*RdvConfig, error) {
 	return cfg, nil
 }
 
-func (d *DriveProviderConfig) GetInfo() {
-	utils.Log(utils.Info, "Selected drive provider: %s, cient-id: %s", d.Name, d.Id)
+func (d *DriveProviderConfig) GetInfo() string {
+	return fmt.Sprintf("%s, id: %s", d.Name, d.Id)
 }
 
 func (c *RdvConfig) SaveCfg() error {
@@ -77,4 +78,14 @@ func (c *RdvConfig) SaveCfg() error {
 	}
 
 	return os.WriteFile(RdvConfFilePath, s, 0600)
+}
+
+func (c *RdvConfig) GetSelectedDrive() *DriveProviderConfig {
+	for i := range c.Drives {
+		if c.Drives[i].Status == Selected {
+			return &c.Drives[i]
+		}
+	}
+
+	return nil
 }

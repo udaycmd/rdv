@@ -1,4 +1,3 @@
-// 'rdv' semantic version and commit info
 package utils
 
 var (

@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 
 	"github.com/udaycmd/rdv/internal"
+	"github.com/udaycmd/rdv/internal/oauth/providers"
 	"github.com/zalando/go-keyring"
 	"golang.org/x/oauth2"
 )
 
-func GetToken(p OauthProvider) (*oauth2.Token, error) {
-	key, err := keyring.Get(p.GetCfg().ClientId, internal.RdvUserId)
+func GetToken(id string) (*oauth2.Token, error) {
+	key, err := keyring.Get(id, internal.RdvUserId)
 	if err != nil {
 		return nil, err
 	}
@@ -23,21 +24,21 @@ func GetToken(p OauthProvider) (*oauth2.Token, error) {
 	return t, nil
 }
 
-func SetToken(p OauthProvider, t *oauth2.Token) error {
+func SetToken(id string, t *oauth2.Token) error {
 	key, err := json.Marshal(t)
 	if err != nil {
 		return err
 	}
 
-	return keyring.Set(p.GetCfg().ClientId, internal.RdvUserId, string(key))
+	return keyring.Set(id, internal.RdvUserId, string(key))
 }
 
-func RevokeToken(p OauthProvider) error {
+func RevokeToken(p providers.OauthProvider) error {
 	// server side cleanup
 	err := p.Revoke()
 	if err != nil {
 		return err
 	}
 
-	return keyring.Delete(p.GetCfg().ClientId, internal.RdvUserId)
+	return keyring.Delete(p.GetConfig().ClientID, internal.RdvUserId)
 }

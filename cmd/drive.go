@@ -2,18 +2,20 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/udaycmd/rdv/internal"
 	"github.com/udaycmd/rdv/internal/drives"
 	"github.com/udaycmd/rdv/internal/oauth"
 	"github.com/udaycmd/rdv/utils"
+	"github.com/zalando/go-keyring"
 )
 
 var (
 	add    string
-	remove string
-	show   bool
+	revoke string
+	list   bool
 	use    bool
 )
 
@@ -22,145 +24,191 @@ var driveCmd = &cobra.Command{
 	Short: "add or remove a remote drive",
 	Long:  "add or remove a remote drive",
 	PreRun: func(cmd *cobra.Command, args []string) {
-		if add == "" && remove == "" && !show && !use {
-			utils.ExitOnError("must provide at least one of the flags for the command")
-		} else if add == remove && add != "" {
-			utils.ExitOnError("cannot add and remove the same drive")
+		if add == "" && revoke == "" && !list && !use {
+			utils.ExitOnError("must provide at least one of the flags for the command\n")
+		} else if add == revoke && add != "" {
+			utils.ExitOnError("cannot add and remove the same drive\n")
+		}
+
+		var err error
+		Config, err = internal.LoadCfg()
+		if err != nil {
+			utils.ExitOnError("%s\n", err.Error())
 		}
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		cfg, err := internal.LoadCfg()
-		if err != nil {
-			utils.ExitOnError("%s", err.Error())
-		}
-
 		if add != "" {
-			err := driveAdd(add, cfg)
+			err := driveAdd(add, Config)
 			if err != nil {
-				showDrives(cfg)
-				utils.ExitOnError("%s", err.Error())
+				utils.ExitOnError("%s\n", err.Error())
 			}
 
-			utils.Log(utils.Success, "Added %s successfully", add)
+			utils.Log(utils.Success, "Added %s successfully\n", add)
 		}
 
-		if remove != "" {
-			err := driveRemove(remove, cfg)
+		if revoke != "" {
+			err := driveRevoke(revoke, Config)
 			if err != nil {
-				utils.ExitOnError("%s", err.Error())
+				utils.ExitOnError("%s\n", err.Error())
 			}
 
-			utils.Log(utils.Success, "Removed %s successfully", remove)
+			utils.Log(utils.Success, "Removed %s successfully\n", revoke)
 		}
 
 		if use {
-			err := useDrive(cfg)
+			err := useDrive(Config)
 			if err != nil {
-				utils.ExitOnError("%s", err.Error())
+				utils.ExitOnError("%s\n", err.Error())
 			}
 		}
 
-		if show {
-			showDrives(cfg)
+		if list {
+			listDrives(Config)
 		}
 	},
 }
 
 func driveAdd(dn string, c *internal.RdvConfig) error {
-	for _, d := range c.Drives {
-		if d.Name == dn && d.Status != internal.Revoked {
-			return fmt.Errorf("%s already linked with rdv", dn)
+	for i, d := range c.Drives {
+		if d.Name == dn {
+			switch d.Status {
+			case internal.Revoked:
+				utils.Log(utils.Info, "Reconnecting with %s\n", d.Name)
+
+				if err := oauth.Authorize(drives.GetDriveOauthProvider(d.Name)); err != nil {
+					return err
+				}
+
+				c.Drives[i].Status = internal.Default
+				return c.SaveCfg()
+			default:
+				return fmt.Errorf("%s already linked with rdv", dn)
+			}
 		}
 	}
 
-	for _, dr := range drives.SupportedDrives {
-		dCfg := dr.GetCfg()
+	p := drives.GetDriveOauthProvider(dn)
+	if p == nil {
+		return fmt.Errorf("%s is not supported by rdv", dn)
+	}
 
-		if dCfg.Name == dn {
-			c.Drives = append(
-				c.Drives,
-				internal.DriveProviderConfig{
-					Name:   dCfg.Name,
-					Id:     dCfg.ClientId,
-					Status: internal.Default,
-				})
-			err := oauth.Authorize(dr)
+	config := p.GetConfig()
+	c.Drives = append(c.Drives,
+		internal.DriveProviderConfig{
+			Name:   p.Name(),
+			Id:     config.ClientID,
+			Status: internal.Default,
+		})
+
+	err := oauth.Authorize(p)
+	if err != nil {
+		return err
+	}
+
+	return c.SaveCfg()
+}
+
+func driveRevoke(dn string, c *internal.RdvConfig) error {
+	for i, d := range c.Drives {
+		if d.Name == dn {
+			switch d.Status {
+			case internal.Revoked:
+				return fmt.Errorf("%s already disconnected", dn)
+			default:
+				p := drives.GetDriveOauthProvider(d.Name)
+				err := oauth.RevokeToken(p)
+				if err != nil {
+					return err
+				}
+
+				c.Drives[i].Status = internal.Revoked
+				return c.SaveCfg()
+			}
+		}
+	}
+
+	// If token is present in keyring but configuration is empty
+	err := oauth.RevokeToken(drives.GetDriveOauthProvider(dn))
+	if err == keyring.ErrNotFound {
+		return fmt.Errorf("%s is not linked with rdv", dn)
+	}
+
+	return err
+}
+
+func useDrive(c *internal.RdvConfig) error {
+	switch len(c.Drives) {
+	case 0:
+		return fmt.Errorf("no connected drives found")
+	case 1:
+		if c.Drives[0].Status == internal.Revoked {
+			utils.Log(utils.Info, "A disconnected drive is found: %s\n", c.Drives[0].GetInfo())
+
+			utils.Log(utils.Info, "Would you like to connect to it again? (y/n):\n")
+			choice := ""
+			fmt.Scanln(&choice)
+
+			if strings.ToLower(choice) == "y" {
+				if err := driveAdd(c.Drives[0].Name, c); err != nil {
+					return err
+				}
+
+				c.Drives[0].Status = internal.Selected
+				err := c.SaveCfg()
+				if err != nil {
+					return err
+				}
+			}
+
+			utils.Log(utils.Success, "ok\n")
+		} else {
+			c.Drives[0].Status = internal.Selected
+
+			err := c.SaveCfg()
 			if err != nil {
 				return err
 			}
 
-			return c.SaveCfg()
-		}
-	}
-
-	return fmt.Errorf("%s is not supported by rdv", dn)
-}
-
-func driveRemove(dn string, c *internal.RdvConfig) error {
-	for i, d := range c.Drives {
-		if d.Name == dn {
-			if d.Status != internal.Revoked {
-				for _, dr := range drives.SupportedDrives {
-					dCfg := dr.GetCfg()
-
-					if dCfg.Name == dn {
-						err := oauth.RevokeToken(dr)
-						if err != nil {
-							return err
-						}
-						c.Drives[i].Status = internal.Revoked
-						return c.SaveCfg()
-					}
-				}
-			} else {
-				return fmt.Errorf("%s already disconnected", dn)
-			}
-		}
-	}
-
-	return fmt.Errorf("%s is not connected to rdv", dn)
-}
-
-func useDrive(c *internal.RdvConfig) error {
-	if len(c.Drives) == 0 {
-		return fmt.Errorf("No drives added")
-	} else if len(c.Drives) == 1 {
-		c.Drives[0].Status = internal.Selected
-
-		err := c.SaveCfg()
-		if err != nil {
-			return err
+			utils.Log(utils.Success, "Automatically selected the sole drive\n")
 		}
 
-		utils.Log(utils.Success, "Automatically selected the sole drive")
 		return nil
 	}
 
-	utils.Log(utils.Info, "Select one of the configured drive")
+	utils.Log(utils.Info, "Select one of the configured drive\n")
 	i := 0
-	choice := 0
 	for {
 		if i == len(c.Drives) {
 			break
 		}
 
-		if c.Drives[i].Status == internal.Selected {
-			fmt.Printf("%s (%d) *active\n", c.Drives[i].Name, i+1)
-		} else {
+		switch c.Drives[i].Status {
+		case internal.Default:
 			fmt.Printf("%s (%d)\n", c.Drives[i].Name, i+1)
+		case internal.Selected:
+			fmt.Printf("%s (%d) [active]\n", c.Drives[i].Name, i+1)
+		case internal.Revoked:
+			fmt.Printf("%s (%d) [disconnected]\n", c.Drives[i].Name, i+1)
 		}
 
 		i++
 	}
 
-	utils.Log(utils.Info, "Specify your choice (1 - %d)", i)
+	choice := 0
+	utils.Log(utils.Info, "Specify your choice (1 - %d)\n", i)
 	_, err := fmt.Scanln(&choice)
 	if err != nil {
 		return err
 	}
 
 	if choice > i || choice < 1 {
-		return fmt.Errorf("Invalid choice")
+		return fmt.Errorf("invalid choice")
+	}
+
+	if c.Drives[choice-1].Status == internal.Revoked {
+		if err := driveAdd(c.Drives[choice-1].Name, c); err != nil {
+			return err
+		}
 	}
 
 	c.Drives[choice-1].Status = internal.Selected
@@ -170,26 +218,30 @@ func useDrive(c *internal.RdvConfig) error {
 		}
 	}
 
-	return c.SaveCfg()
-}
-
-func showDrives(c *internal.RdvConfig) {
-	utils.Log(utils.Info, "Supported drives:")
-	for _, d := range drives.SupportedDrives {
-		fmt.Printf("- %s\n", d.GetCfg().Name)
+	if err := c.SaveCfg(); err != nil {
+		return err
 	}
 
-	for _, d := range c.Drives {
-		if d.Status == internal.Selected {
-			d.GetInfo()
-		}
+	utils.Log(utils.Success, "Now using %s\n", c.Drives[choice-1].Name)
+	return nil
+}
+
+func listDrives(c *internal.RdvConfig) {
+	utils.Log(utils.Info, "Supported drives:\n")
+	for _, p := range drives.SupportedDriveProviders {
+		fmt.Printf("/> %s\n", p.Name())
+	}
+
+	d := c.GetSelectedDrive()
+	if d != nil {
+		utils.Log(utils.Info, "Active drive: %s\n", d.GetInfo())
 	}
 }
 
 func init() {
+	driveCmd.Flags().StringVarP(&add, "add", "a", "", "link a remote drive to rdv")
+	driveCmd.Flags().StringVarP(&revoke, "revoke", "r", "", "disconnects the drive's client from rdv, but not the drive itself")
+	driveCmd.Flags().BoolVarP(&use, "use", "u", false, "use a linked drive")
+	driveCmd.Flags().BoolVarP(&list, "list", "l", false, "list supported drives")
 	rootCmd.AddCommand(driveCmd)
-	driveCmd.Flags().StringVarP(&add, "add", "a", "", "drive to add")
-	driveCmd.Flags().StringVarP(&remove, "remove", "r", "", "drive to remove")
-	driveCmd.Flags().BoolVarP(&use, "use", "u", false, "use an added drive")
-	driveCmd.Flags().BoolVarP(&show, "show", "s", false, "show supported drives")
 }

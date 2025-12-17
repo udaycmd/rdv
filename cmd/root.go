@@ -1,8 +1,17 @@
 package cmd
 
 import (
+	"time"
+
 	"github.com/spf13/cobra"
+	"github.com/udaycmd/rdv/internal"
 	"github.com/udaycmd/rdv/utils"
+)
+
+var (
+	RequestTimeoutPeriod                     = 12 * time.Second
+	SpinnerDuration                          = 50 * time.Millisecond
+	Config               *internal.RdvConfig = nil
 )
 
 var rootCmd = &cobra.Command{
@@ -15,6 +24,6 @@ var rootCmd = &cobra.Command{
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		utils.ExitOnError("%s", err.Error())
+		utils.ExitOnError("%s\n", err.Error())
 	}
 }

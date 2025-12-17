@@ -1,4 +1,3 @@
-// Utility functions for opening files, URLs in a browser window.
 // Stolen from https://github.com/pkg/browser/blob/master/browser.go
 package utils
 
