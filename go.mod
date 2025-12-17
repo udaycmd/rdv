@@ -3,6 +3,7 @@ module github.com/udaycmd/rdv
 go 1.25.0
 
 require (
+	github.com/briandowns/spinner v1.23.2
 	github.com/spf13/cobra v1.9.1
 	golang.org/x/oauth2 v0.30.0
 	google.golang.org/api v0.248.0
@@ -11,7 +12,11 @@ require (
 require (
 	al.essio.dev/pkg/shellescape v1.5.1 // indirect
 	github.com/danieljoos/wincred v1.2.2 // indirect
+	github.com/fatih/color v1.7.0 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
+	github.com/mattn/go-colorable v0.1.2 // indirect
+	github.com/mattn/go-isatty v0.0.8 // indirect
+	golang.org/x/term v0.34.0 // indirect
 )
 
 require (

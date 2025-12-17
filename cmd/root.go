@@ -10,6 +10,7 @@ import (
 
 var (
 	RequestTimeoutPeriod                     = 12 * time.Second
+	SpinnerDuration                          = 50 * time.Millisecond
 	Config               *internal.RdvConfig = nil
 )
 
@@ -23,6 +24,6 @@ var rootCmd = &cobra.Command{
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		utils.ExitOnError("%s", err.Error())
+		utils.ExitOnError("%s\n", err.Error())
 	}
 }

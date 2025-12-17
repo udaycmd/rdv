@@ -11,7 +11,7 @@ var versionCmd = &cobra.Command{
 	Long:    "show version and commit",
 	Aliases: []string{"v"},
 	Run: func(cmd *cobra.Command, args []string) {
-		utils.Log(utils.Info, "Rdv version: %s, revision: %s", utils.Version, utils.Commit)
+		utils.Log(utils.Info, "Rdv version: %s, revision: %s\n", utils.Version, utils.Commit)
 	},
 }
 

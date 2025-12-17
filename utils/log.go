@@ -19,15 +19,15 @@ func Log(lvl Level, s string, a ...any) {
 
 	switch lvl {
 	case Info:
-		fmt.Printf("%s\n", Colorize(Cyan, "Info: ")+m)
+		fmt.Printf("%s", Colorize(Cyan, "Info: ")+m)
 	case Success:
-		fmt.Printf("%s\n", Colorize(Green, "Success: ")+m)
+		fmt.Printf("%s", Colorize(Green, "Success: ")+m)
 	case Error:
-		fmt.Fprintf(os.Stderr, "%s\n", Colorize(Red, "Error: ")+m)
+		fmt.Fprintf(os.Stderr, "%s", Colorize(Red, "Error: ")+m)
 	case Warn:
-		fmt.Printf("%s\n", Colorize(Yellow, "Warn: ")+m)
+		fmt.Printf("%s", Colorize(Yellow, "Warn: ")+m)
 	default:
-		fmt.Printf("%s\n", m)
+		fmt.Printf("%s", m)
 	}
 }
 

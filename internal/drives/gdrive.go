@@ -18,10 +18,6 @@ func NewGdrive(srv *drive.Service) *Gdrive {
 }
 
 func (g *Gdrive) View(id string) ([]Meta, error) {
-	if id == "" {
-		id = "root"
-	}
-
 	q := fmt.Sprintf("'%s' in parents and trashed = false", id)
 	call := g.service.Files.List().Q(q).Fields("files(id, name, size, mimeType, modifiedTime)")
 

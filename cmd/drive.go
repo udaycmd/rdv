@@ -25,40 +25,40 @@ var driveCmd = &cobra.Command{
 	Long:  "add or remove a remote drive",
 	PreRun: func(cmd *cobra.Command, args []string) {
 		if add == "" && revoke == "" && !list && !use {
-			utils.ExitOnError("must provide at least one of the flags for the command")
+			utils.ExitOnError("must provide at least one of the flags for the command\n")
 		} else if add == revoke && add != "" {
-			utils.ExitOnError("cannot add and remove the same drive")
+			utils.ExitOnError("cannot add and remove the same drive\n")
 		}
 
 		var err error
 		Config, err = internal.LoadCfg()
 		if err != nil {
-			utils.ExitOnError("%s", err.Error())
+			utils.ExitOnError("%s\n", err.Error())
 		}
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		if add != "" {
 			err := driveAdd(add, Config)
 			if err != nil {
-				utils.ExitOnError("%s", err.Error())
+				utils.ExitOnError("%s\n", err.Error())
 			}
 
-			utils.Log(utils.Success, "Added %s successfully", add)
+			utils.Log(utils.Success, "Added %s successfully\n", add)
 		}
 
 		if revoke != "" {
 			err := driveRevoke(revoke, Config)
 			if err != nil {
-				utils.ExitOnError("%s", err.Error())
+				utils.ExitOnError("%s\n", err.Error())
 			}
 
-			utils.Log(utils.Success, "Removed %s successfully", revoke)
+			utils.Log(utils.Success, "Removed %s successfully\n", revoke)
 		}
 
 		if use {
 			err := useDrive(Config)
 			if err != nil {
-				utils.ExitOnError("%s", err.Error())
+				utils.ExitOnError("%s\n", err.Error())
 			}
 		}
 
@@ -73,7 +73,7 @@ func driveAdd(dn string, c *internal.RdvConfig) error {
 		if d.Name == dn {
 			switch d.Status {
 			case internal.Revoked:
-				utils.Log(utils.Info, "Reconnecting with %s", d.Name)
+				utils.Log(utils.Info, "Reconnecting with %s\n", d.Name)
 
 				if err := oauth.Authorize(drives.GetDriveOauthProvider(d.Name)); err != nil {
 					return err
@@ -142,9 +142,9 @@ func useDrive(c *internal.RdvConfig) error {
 		return fmt.Errorf("no connected drives found")
 	case 1:
 		if c.Drives[0].Status == internal.Revoked {
-			utils.Log(utils.Info, "A disconnected drive is found: %s", c.Drives[0].GetInfo())
+			utils.Log(utils.Info, "A disconnected drive is found: %s\n", c.Drives[0].GetInfo())
 
-			utils.Log(utils.Info, "Would you like to connect to it again? (y/n):")
+			utils.Log(utils.Info, "Would you like to connect to it again? (y/n):\n")
 			choice := ""
 			fmt.Scanln(&choice)
 
@@ -160,7 +160,7 @@ func useDrive(c *internal.RdvConfig) error {
 				}
 			}
 
-			utils.Log(utils.Success, "ok")
+			utils.Log(utils.Success, "ok\n")
 		} else {
 			c.Drives[0].Status = internal.Selected
 
@@ -169,13 +169,13 @@ func useDrive(c *internal.RdvConfig) error {
 				return err
 			}
 
-			utils.Log(utils.Success, "Automatically selected the sole drive")
+			utils.Log(utils.Success, "Automatically selected the sole drive\n")
 		}
 
 		return nil
 	}
 
-	utils.Log(utils.Info, "Select one of the configured drive")
+	utils.Log(utils.Info, "Select one of the configured drive\n")
 	i := 0
 	for {
 		if i == len(c.Drives) {
@@ -195,7 +195,7 @@ func useDrive(c *internal.RdvConfig) error {
 	}
 
 	choice := 0
-	utils.Log(utils.Info, "Specify your choice (1 - %d)", i)
+	utils.Log(utils.Info, "Specify your choice (1 - %d)\n", i)
 	_, err := fmt.Scanln(&choice)
 	if err != nil {
 		return err
@@ -222,19 +222,19 @@ func useDrive(c *internal.RdvConfig) error {
 		return err
 	}
 
-	utils.Log(utils.Success, "Now using %s", c.Drives[choice-1].Name)
+	utils.Log(utils.Success, "Now using %s\n", c.Drives[choice-1].Name)
 	return nil
 }
 
 func listDrives(c *internal.RdvConfig) {
-	utils.Log(utils.Info, "Supported drives:")
+	utils.Log(utils.Info, "Supported drives:\n")
 	for _, p := range drives.SupportedDriveProviders {
 		fmt.Printf("/> %s\n", p.Name())
 	}
 
 	d := c.GetSelectedDrive()
 	if d != nil {
-		utils.Log(utils.Info, "Active drive: %s", d.GetInfo())
+		utils.Log(utils.Info, "Active drive: %s\n", d.GetInfo())
 	}
 }
 

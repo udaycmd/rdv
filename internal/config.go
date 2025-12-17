@@ -38,7 +38,7 @@ type RdvConfig struct {
 func getHomeDir() string {
 	res, err := os.UserHomeDir()
 	if err != nil {
-		utils.ExitOnError("%s", err.Error())
+		utils.ExitOnError("%s\n", err.Error())
 	}
 	return res
 }
@@ -46,7 +46,7 @@ func getHomeDir() string {
 func getUserId() string {
 	u, err := user.Current()
 	if err != nil {
-		utils.ExitOnError("%s", err.Error())
+		utils.ExitOnError("%s\n", err.Error())
 	}
 	return u.Uid
 }
