@@ -14,29 +14,32 @@ const (
 	Warn
 )
 
-func Log(lvl Level, s string, a ...any) {
-	m := fmt.Sprintf(s, a...)
+func Slogf(lvl Level, t string, a ...any) string {
+	m := fmt.Sprintf(t, a...)
+	var s string
 
 	switch lvl {
 	case Info:
-		fmt.Printf("%s", Colorize(Cyan, "Info: ")+m)
+		s = Colorize(Cyan, "Info: ") + m
 	case Success:
-		fmt.Printf("%s", Colorize(Green, "Success: ")+m)
+		s = Colorize(Green, "Success: ") + m
 	case Error:
-		fmt.Fprintf(os.Stderr, "%s", Colorize(Red, "Error: ")+m)
+		s = Colorize(Red, "Error: ") + m
 	case Warn:
-		fmt.Printf("%s", Colorize(Yellow, "Warn: ")+m)
+		s = Colorize(Yellow, "Warn: ") + m
 	default:
-		fmt.Printf("%s", m)
+		s = m
 	}
+
+	return s
 }
 
 func ExitOnError(message string, a ...any) {
-	Log(Error, message, a...)
+	fmt.Fprintf(os.Stderr, "%s", Slogf(Error, message, a...))
 	os.Exit(1)
 }
 
 func ExitOnSuccess(message string, a ...any) {
-	Log(Success, message, a...)
+	fmt.Fprintf(os.Stdout, "%s", Slogf(Success, message, a...))
 	os.Exit(0)
 }

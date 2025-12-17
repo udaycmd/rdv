@@ -56,7 +56,7 @@ var lsCmd = &cobra.Command{
 func ls(drive drives.Drive, id string) error {
 	s := spinner.New(spinner.CharSets[11], SpinnerDuration)
 	s.Color("magenta")
-	s.Prefix = fmt.Sprintf("Fetching the contents of %s... ", dir)
+	s.Prefix = utils.Slogf(utils.Info, "Fetching the contents of %s... ", dir)
 
 	s.Start()
 	filesMeta, err := drive.View(id)

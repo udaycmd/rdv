@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 	"github.com/udaycmd/rdv/utils"
 )
@@ -11,7 +13,7 @@ var versionCmd = &cobra.Command{
 	Long:    "show version and commit",
 	Aliases: []string{"v"},
 	Run: func(cmd *cobra.Command, args []string) {
-		utils.Log(utils.Info, "Rdv version: %s, revision: %s\n", utils.Version, utils.Commit)
+		fmt.Print(utils.Slogf(utils.Info, "Rdv version: %s, revision: %s\n", utils.Version, utils.Commit))
 	},
 }
 
