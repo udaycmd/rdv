@@ -4,12 +4,11 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"time"
 
 	"github.com/udaycmd/rdv/internal/oauth"
 	"github.com/udaycmd/rdv/internal/oauth/providers"
-	"google.golang.org/api/drive/v3"
-	"google.golang.org/api/option"
 )
 
 type Meta struct {
@@ -20,6 +19,8 @@ type Meta struct {
 	LastModified time.Time
 	IsDir        bool
 }
+
+type DriveFactory func(ctx context.Context, client *http.Client) (Drive, error)
 
 type Drive interface {
 	// Returns the contents of a directory.
@@ -43,23 +44,14 @@ type Drive interface {
 	MkDir(parentId string, name string) (*Meta, error)
 }
 
-var SupportedDriveProviders = []providers.OauthProvider{
-	providers.NewGdriveAuthProvider(),
-	providers.NewDboxAuthProvider(),
-}
+var driveRegistry = make(map[string]DriveFactory)
 
-func GetDriveOauthProvider(name string) providers.OauthProvider {
-	for _, p := range SupportedDriveProviders {
-		if p.Name() == name {
-			return p
-		}
-	}
-
-	return nil
+func Register(name string, factory DriveFactory) {
+	driveRegistry[name] = factory
 }
 
 func NewDriveFromProvider(ctx context.Context, provider string) (Drive, error) {
-	p := GetDriveOauthProvider(provider)
+	p := providers.Get(provider)
 	if p == nil {
 		return nil, fmt.Errorf("unknown provider: %s", provider)
 	}
@@ -73,18 +65,10 @@ func NewDriveFromProvider(ctx context.Context, provider string) (Drive, error) {
 
 	client := config.Client(ctx, t)
 
-	switch p.Name() {
-	case "gdrive":
-		srv, err := drive.NewService(ctx, option.WithHTTPClient(client))
-		if err != nil {
-			return nil, err
-		}
-
-		return NewGdrive(srv), nil
-	case "dbox":
-		return NewDbox(client), nil
-
-	default:
+	factory, ok := driveRegistry[p.Name()]
+	if !ok {
 		return nil, fmt.Errorf("unsupported provider: %s", p.Name())
 	}
+
+	return factory(ctx, client)
 }

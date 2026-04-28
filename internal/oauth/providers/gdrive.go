@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os/user"
 	"strings"
 
-	"github.com/udaycmd/rdv/internal"
 	"github.com/zalando/go-keyring"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -36,7 +36,12 @@ func (g *gdriveAuthProvider) GetConfig() *oauth2.Config {
 }
 
 func (g *gdriveAuthProvider) Revoke() error {
-	key, err := keyring.Get(g.GetConfig().ClientID, internal.RdvUserId)
+	u, err := user.Current()
+	if err != nil {
+		return err
+	}
+
+	key, err := keyring.Get(g.GetConfig().ClientID, u.Uid)
 	if err != nil {
 		return err
 	}
@@ -67,4 +72,8 @@ func (g *gdriveAuthProvider) Revoke() error {
 	}
 
 	return res.Body.Close()
+}
+
+func init() {
+	Register(NewGdriveAuthProvider())
 }

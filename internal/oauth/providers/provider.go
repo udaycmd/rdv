@@ -10,3 +10,22 @@ type OauthProvider interface {
 	GetConfig() *oauth2.Config
 	Revoke() error
 }
+
+var oauthRegistry = make(map[string]OauthProvider)
+
+func Register(p OauthProvider) {
+	oauthRegistry[p.Name()] = p
+}
+
+func Get(name string) OauthProvider {
+	return oauthRegistry[name]
+}
+
+func GetAll() []OauthProvider {
+	var providers []OauthProvider
+	for _, p := range oauthRegistry {
+		providers = append(providers, p)
+	}
+
+	return providers
+}

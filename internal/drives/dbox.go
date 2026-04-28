@@ -1,6 +1,7 @@
 package drives
 
 import (
+	"context"
 	"errors"
 	"io"
 	"net/http"
@@ -32,4 +33,10 @@ func (d *Dbox) Delete(id string) error {
 
 func (d *Dbox) MkDir(parentId string, name string) (*Meta, error) {
 	return nil, errors.New("dbox: MkDir not implemented")
+}
+
+func init() {
+	Register("dbox", func(_ context.Context, client *http.Client) (Drive, error) {
+		return NewDbox(client), nil
+	})
 }

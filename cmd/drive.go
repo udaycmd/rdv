@@ -6,8 +6,8 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/udaycmd/rdv/internal"
-	"github.com/udaycmd/rdv/internal/drives"
 	"github.com/udaycmd/rdv/internal/oauth"
+	"github.com/udaycmd/rdv/internal/oauth/providers"
 	"github.com/udaycmd/rdv/utils"
 	"github.com/zalando/go-keyring"
 )
@@ -75,7 +75,7 @@ func driveAdd(dn string, c *internal.RdvConfig) error {
 			case internal.Revoked:
 				fmt.Print(utils.Slogf(utils.Info, "Reconnecting with %s\n", d.Name))
 
-				if err := oauth.Authorize(drives.GetDriveOauthProvider(d.Name)); err != nil {
+				if err := oauth.Authorize(providers.Get(d.Name)); err != nil {
 					return err
 				}
 
@@ -87,7 +87,7 @@ func driveAdd(dn string, c *internal.RdvConfig) error {
 		}
 	}
 
-	p := drives.GetDriveOauthProvider(dn)
+	p := providers.Get(dn)
 	if p == nil {
 		return fmt.Errorf("%s is not supported by rdv", dn)
 	}
@@ -115,7 +115,7 @@ func driveRevoke(dn string, c *internal.RdvConfig) error {
 			case internal.Revoked:
 				return fmt.Errorf("%s already disconnected", dn)
 			default:
-				p := drives.GetDriveOauthProvider(d.Name)
+				p := providers.Get(d.Name)
 				err := oauth.RevokeToken(p)
 				if err != nil {
 					return err
@@ -128,7 +128,7 @@ func driveRevoke(dn string, c *internal.RdvConfig) error {
 	}
 
 	// If token is present in keyring but configuration is empty
-	err := oauth.RevokeToken(drives.GetDriveOauthProvider(dn))
+	err := oauth.RevokeToken(providers.Get(dn))
 	if err == keyring.ErrNotFound {
 		return fmt.Errorf("%s is not linked with rdv", dn)
 	}
@@ -228,7 +228,7 @@ func useDrive(c *internal.RdvConfig) error {
 
 func listDrives(c *internal.RdvConfig) {
 	fmt.Print(utils.Slogf(utils.Info, "Supported drives:\n"))
-	for _, p := range drives.SupportedDriveProviders {
+	for _, p := range providers.GetAll() {
 		fmt.Printf("/> %s\n", p.Name())
 	}
 

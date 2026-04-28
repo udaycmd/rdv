@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/user"
 	"path/filepath"
 
 	"github.com/udaycmd/rdv/utils"
@@ -18,10 +17,8 @@ const (
 	Revoked
 )
 
-var (
-	RdvConfFileName string = ".rdv.conf.json"
-	RdvConfFilePath string = filepath.Join(getHomeDir(), RdvConfFileName)
-	RdvUserId       string = getUserId()
+const (
+	rdvConfFileName string = ".rdv.config"
 )
 
 type DriveProviderConfig struct {
@@ -35,24 +32,13 @@ type RdvConfig struct {
 	Drives []DriveProviderConfig `json:"drives"` // configuration for each drive
 }
 
-func getHomeDir() string {
-	res, err := os.UserHomeDir()
-	if err != nil {
-		utils.ExitOnError("%s\n", err.Error())
-	}
-	return res
-}
-
-func getUserId() string {
-	u, err := user.Current()
-	if err != nil {
-		utils.ExitOnError("%s\n", err.Error())
-	}
-	return u.Uid
-}
-
 func LoadCfg() (*RdvConfig, error) {
-	f, err := os.ReadFile(RdvConfFilePath)
+	d, err := os.UserConfigDir()
+	if err != nil {
+		return nil, err
+	}
+
+	f, err := os.ReadFile(filepath.Join(d, rdvConfFileName))
 	if os.IsNotExist(err) {
 		return &RdvConfig{Ver: utils.Version, Drives: []DriveProviderConfig{}}, nil
 	} else if err != nil {
@@ -72,12 +58,17 @@ func (d *DriveProviderConfig) GetInfo() string {
 }
 
 func (c *RdvConfig) SaveCfg() error {
+	d, err := os.UserConfigDir()
+	if err != nil {
+		return err
+	}
+
 	s, err := json.MarshalIndent(c, "", "  ")
 	if err != nil {
 		return err
 	}
 
-	return os.WriteFile(RdvConfFilePath, s, 0600)
+	return os.WriteFile(filepath.Join(d, rdvConfFileName), s, 0600)
 }
 
 func (c *RdvConfig) GetSelectedDrive() *DriveProviderConfig {

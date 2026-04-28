@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os/user"
 
-	"github.com/udaycmd/rdv/internal"
 	"github.com/zalando/go-keyring"
 	"golang.org/x/oauth2"
 )
@@ -35,7 +35,12 @@ func (d *dboxAuthProvider) GetConfig() *oauth2.Config {
 }
 
 func (d *dboxAuthProvider) Revoke() error {
-	key, err := keyring.Get(d.GetConfig().ClientID, internal.RdvUserId)
+	u, err := user.Current()
+	if err != nil {
+		return err
+	}
+
+	key, err := keyring.Get(d.GetConfig().ClientID, u.Uid)
 	if err != nil {
 		return err
 	}
@@ -63,4 +68,8 @@ func (d *dboxAuthProvider) Revoke() error {
 	}
 
 	return res.Body.Close()
+}
+
+func init() {
+	Register(NewDboxAuthProvider())
 }

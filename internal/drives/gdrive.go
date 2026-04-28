@@ -1,12 +1,15 @@
 package drives
 
 import (
+	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"time"
 
 	"google.golang.org/api/drive/v3"
 	"google.golang.org/api/googleapi"
+	"google.golang.org/api/option"
 )
 
 type Gdrive struct {
@@ -93,4 +96,15 @@ func (g *Gdrive) Delete(id string) error {
 
 func (g *Gdrive) MkDir(parentId string, name string) (*Meta, error) {
 	return nil, nil
+}
+
+func init() {
+	Register("gdrive", func(ctx context.Context, client *http.Client) (Drive, error) {
+		srv, err := drive.NewService(ctx, option.WithHTTPClient(client))
+		if err != nil {
+			return nil, err
+		}
+
+		return NewGdrive(srv), nil
+	})
 }
