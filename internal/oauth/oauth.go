@@ -7,16 +7,12 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"net"
 	"net/http"
 
 	"github.com/udaycmd/rdv/internal/oauth/providers"
 	"github.com/udaycmd/rdv/utils"
 	"golang.org/x/oauth2"
-)
-
-var (
-	authPort        string = "5330"
-	authRedirectURL string = fmt.Sprintf("http://localhost:%s/callback", authPort)
 )
 
 func genRandomBytes(len int) (string, error) {
@@ -46,7 +42,14 @@ func pkce() (string, string, error) {
 
 func Authorize(op providers.OauthProvider) error {
 	config := op.GetConfig()
-	config.RedirectURL = authRedirectURL
+
+	l, err := net.Listen("tcp", "localhost:0")
+	if err != nil {
+		return err
+	}
+	defer l.Close()
+
+	config.RedirectURL = fmt.Sprintf("http://localhost:%d/callback", l.Addr().(*net.TCPAddr).Port)
 
 	code_verifier, code_challenge, err := pkce()
 	if err != nil {
@@ -70,7 +73,9 @@ func Authorize(op providers.OauthProvider) error {
 	}
 
 	codeChn := make(chan string)
-	http.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
 		query := r.URL.Query()
 		code := query.Get("code")
 		rs := query.Get("state")
@@ -86,8 +91,11 @@ func Authorize(op providers.OauthProvider) error {
 		codeChn <- code
 	})
 
-	go http.ListenAndServe(":"+authPort, nil)
+	server := &http.Server{Handler: mux}
+	go server.Serve(l)
+
 	code := <-codeChn
+	_ = server.Shutdown(context.Background())
 
 	// exchange with pkce
 	token, err := config.Exchange(context.Background(), code,
