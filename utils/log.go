@@ -1,45 +1,44 @@
 package utils
 
 import (
-	"fmt"
 	"os"
+	"time"
+
+	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/log"
 )
 
-type Level int
+var Logger *log.Logger
 
-const (
-	Info Level = iota
-	Success
-	Error
-	Warn
-)
+func InitLogger(debug bool) {
+	Logger = log.NewWithOptions(os.Stderr, log.Options{
+		ReportTimestamp: true,
+		TimeFormat:      time.TimeOnly,
+	})
 
-func Slogf(lvl Level, t string, a ...any) string {
-	m := fmt.Sprintf(t, a...)
-	var s string
+	styles := log.DefaultStyles()
+	styles.Levels[log.FatalLevel] = lipgloss.NewStyle().
+		SetString("ERROR").
+		Padding(0, 1, 0, 1).
+		Background(lipgloss.Color("#ff3030")).
+		Foreground(lipgloss.Color("0"))
 
-	switch lvl {
-	case Info:
-		s = Colorize(Cyan, "Info: ") + m
-	case Success:
-		s = Colorize(Green, "Success: ") + m
-	case Error:
-		s = Colorize(Red, "Error: ") + m
-	case Warn:
-		s = Colorize(Yellow, "Warn: ") + m
-	default:
-		s = m
+	styles.Levels[log.InfoLevel] = lipgloss.NewStyle().
+		SetString("INFO").
+		Padding(0, 1, 0, 1).
+		Background(lipgloss.Color("#30ff30")).
+		Foreground(lipgloss.Color("0"))
+
+	styles.Levels[log.WarnLevel] = lipgloss.NewStyle().
+		SetString("WARN").
+		Padding(0, 1, 0, 1).
+		Background(lipgloss.Color("#ffff00")).
+		Foreground(lipgloss.Color("0"))
+
+	styles.Keys["message"] = lipgloss.NewStyle().Foreground(lipgloss.Color("#3030ff"))
+	styles.Values["message"] = lipgloss.NewStyle().Bold(true)
+
+	if debug {
+		Logger.SetLevel(log.DebugLevel)
 	}
-
-	return s
-}
-
-func ExitOnError(message string, a ...any) {
-	fmt.Fprintf(os.Stderr, "%s", Slogf(Error, message, a...))
-	os.Exit(1)
-}
-
-func ExitOnSuccess(message string, a ...any) {
-	fmt.Fprintf(os.Stdout, "%s", Slogf(Success, message, a...))
-	os.Exit(0)
 }

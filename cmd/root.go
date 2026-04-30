@@ -24,6 +24,10 @@ var rootCmd = &cobra.Command{
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		utils.ExitOnError("%s\n", err.Error())
+		utils.Logger.Fatal("", "message", err.Error())
 	}
+}
+
+func init() {
+	utils.InitLogger(false)
 }

@@ -28,8 +28,8 @@ func (g *gdriveAuthProvider) Name() string {
 
 func (g *gdriveAuthProvider) GetConfig() *oauth2.Config {
 	return &oauth2.Config{
-		ClientID:     "593200518603-k0ptna6taq593eiulqnd4vfsk1djh0vl.apps.googleusercontent.com",
-		ClientSecret: "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",
+		ClientID:     "51115061200-h4istsfp5uunp6r0qveu0nk3lbp2pl4h.apps.googleusercontent.com",
+		ClientSecret: "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",
 		Endpoint:     google.Endpoint,
 		Scopes:       []string{drive.DriveScope},
 	}

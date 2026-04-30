@@ -10,6 +10,8 @@ LDFLAGS :=	-X '$(MODULE)/utils.Commit=$(COMMIT)'	\
 			-X '$(MODULE)/utils.Version=$(VERSION)' \
 			-s -w
 
+all: build
+
 fmt:
 	go mod tidy && go fmt ./...
 

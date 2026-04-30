@@ -1,4 +1,4 @@
-package drives
+package drive
 
 import (
 	"context"
@@ -53,7 +53,7 @@ func (g *Gdrive) View(id string) ([]Meta, error) {
 func (g *Gdrive) Get(id string) (io.ReadCloser, error) {
 	resp, err := g.service.Files.Get(id).Download()
 	if err != nil {
-		return nil, fmt.Errorf("gdrive get: %w", err)
+		return nil, err
 	}
 
 	return resp.Body, nil
