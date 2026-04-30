@@ -3,6 +3,7 @@ package cmd
 import (
 	"time"
 
+	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 	"github.com/udaycmd/rdv/internal"
 	"github.com/udaycmd/rdv/utils"
@@ -24,10 +25,15 @@ var rootCmd = &cobra.Command{
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		utils.Logger.Fatal("", "message", err.Error())
+		utils.Logger.Logf(log.FatalLevel, "%s", err.Error())
 	}
 }
 
 func init() {
 	utils.InitLogger(false)
+	var err error
+	Config, err = internal.LoadCfg()
+	if err != nil {
+		utils.Logger.Fatal("can't load config file", "message", err.Error())
+	}
 }

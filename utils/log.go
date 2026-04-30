@@ -35,8 +35,9 @@ func InitLogger(debug bool) {
 		Background(lipgloss.Color("#ffff00")).
 		Foreground(lipgloss.Color("0"))
 
-	styles.Keys["message"] = lipgloss.NewStyle().Foreground(lipgloss.Color("#3030ff"))
-	styles.Values["message"] = lipgloss.NewStyle().Bold(true)
+	styles.Keys["reason"] = lipgloss.NewStyle().Foreground(lipgloss.Color("#3030ff"))
+	styles.Values["reason"] = lipgloss.NewStyle().Bold(true)
+	Logger.SetStyles(styles)
 
 	if debug {
 		Logger.SetLevel(log.DebugLevel)

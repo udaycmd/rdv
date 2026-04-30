@@ -10,7 +10,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
-	"github.com/udaycmd/rdv/internal"
 	"github.com/udaycmd/rdv/internal/drive"
 	"github.com/udaycmd/rdv/utils"
 )
@@ -21,21 +20,10 @@ var lsCmd = &cobra.Command{
 	Use:   "ls",
 	Short: "list contents of a drive",
 	Long:  "list contents of a drive",
-	PreRun: func(cmd *cobra.Command, args []string) {
-		var err error
-		if err = utils.ClearScreen(); err != nil {
-			utils.Logger.Fatal("", "message", err.Error())
-		}
-
-		Config, err = internal.LoadCfg()
-		if err != nil {
-			utils.Logger.Fatal("", "message", err.Error())
-		}
-	},
 	Run: func(cmd *cobra.Command, args []string) {
 		d := Config.GetSelectedDrive()
 		if d == nil {
-			utils.Logger.Fatal("", "message", "No selected drive found")
+			utils.Logger.Fatal("Oops!", "reason", "No selected drive found")
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), RequestTimeoutPeriod)
@@ -43,12 +31,12 @@ var lsCmd = &cobra.Command{
 
 		drive, err := drive.NewDriveFromProvider(ctx, d.Name)
 		if err != nil {
-			utils.Logger.Fatal("", "message", err.Error())
+			utils.Logger.Fatal("Oops!", "reason", err.Error())
 		}
 
 		p := tea.NewProgram(newModel(drive, dirId), tea.WithAltScreen())
 		if _, err := p.Run(); err != nil {
-			utils.Logger.Fatal("", "message", err.Error())
+			utils.Logger.Fatal("Oops!", "reason", err.Error())
 		}
 	},
 }
