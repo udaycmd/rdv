@@ -27,6 +27,16 @@ func ErrorView(err error, width, height int) string {
 	)
 }
 
+func LoadingView(message string, width, height int) string {
+	return lipgloss.Place(
+		width,
+		height,
+		lipgloss.Center,
+		lipgloss.Center,
+		message,
+	)
+}
+
 func ListView(table table.Model, dir string, width, height int) string {
 	infoBox := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#d70070")).

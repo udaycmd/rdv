@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+
+	"github.com/charmbracelet/log"
 )
 
 func OpenFile(path string) error {
@@ -36,7 +38,7 @@ func OpenURL(url string) error {
 	}
 
 	if provider == "" {
-		fmt.Fprintln(os.Stdout, Colorize(Green, "Please open the following url in your system web browser: \n"), url)
+		Logger.Logf(log.InfoLevel, "Please open the following url in your system web browser: \n\n %s", url)
 		return nil
 	}
 

@@ -21,12 +21,12 @@ var lsCmd = &cobra.Command{
 	Short: "list contents of a drive",
 	Long:  "list contents of a drive",
 	Run: func(cmd *cobra.Command, args []string) {
-		d := Config.GetSelectedDrive()
+		d := config.GetSelectedDrive()
 		if d == nil {
 			utils.Logger.Fatal("Oops!", "reason", "No selected drive found")
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), RequestTimeoutPeriod)
+		ctx, cancel := context.WithTimeout(context.Background(), requestTimeoutPeriod)
 		defer cancel()
 
 		drive, err := drive.NewDriveFromProvider(ctx, d.Name)
@@ -34,7 +34,7 @@ var lsCmd = &cobra.Command{
 			utils.Logger.Fatal("Oops!", "reason", err.Error())
 		}
 
-		p := tea.NewProgram(newModel(drive, dirId), tea.WithAltScreen())
+		p := tea.NewProgram(newLsModel(drive, dirId), tea.WithAltScreen())
 		if _, err := p.Run(); err != nil {
 			utils.Logger.Fatal("Oops!", "reason", err.Error())
 		}
@@ -55,15 +55,15 @@ type lsModel struct {
 }
 
 type (
-	recvMsg []drive.Meta
 	errMsg  error
+	recvMsg []drive.Meta
 	navPair struct {
 		id   string
 		name string
 	}
 )
 
-func newModel(drive drive.Drive, dir string) *lsModel {
+func newLsModel(drive drive.Drive, dir string) *lsModel {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("#e0164c"))
@@ -83,7 +83,7 @@ func newModel(drive drive.Drive, dir string) *lsModel {
 	}
 }
 
-func (m lsModel) fetchFiles() tea.Msg {
+func (m *lsModel) fetchFiles() tea.Msg {
 	files, err := m.drive.View(m.dirId)
 	if err != nil {
 		return errMsg(err)
@@ -92,7 +92,7 @@ func (m lsModel) fetchFiles() tea.Msg {
 	return recvMsg(files)
 }
 
-func (m lsModel) createTable(files []drive.Meta) table.Model {
+func (m *lsModel) createTable(files []drive.Meta) table.Model {
 	columns := []table.Column{
 		{Title: "Id", Width: 40},
 		{Title: "Name", Width: 30},
@@ -102,6 +102,19 @@ func (m lsModel) createTable(files []drive.Meta) table.Model {
 	}
 
 	rows := []table.Row{}
+
+	parentDirName := ""
+	if len(m.navigation) > 0 {
+		parentDirName = ".. 📁 " + m.navigation[len(m.navigation)-1].name
+		rows = append(rows, table.Row{
+			m.navigation[len(m.navigation)-1].id,
+			parentDirName,
+			"",
+			"Parent",
+			"",
+		})
+	}
+
 	for _, f := range files {
 		size := fmt.Sprintf("%d kb", f.Size/1024)
 		modTime := f.LastModified.Format(time.DateTime)
@@ -140,15 +153,23 @@ func (m lsModel) createTable(files []drive.Meta) table.Model {
 	return t
 }
 
-func (m lsModel) Init() tea.Cmd {
+func (m *lsModel) Init() tea.Cmd {
 	return tea.Batch(
 		m.spinner.Tick,
 		m.fetchFiles,
 	)
 }
 
-func (m lsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *lsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
+
+	var navigateBack = func(m *lsModel) (tea.Model, tea.Cmd) {
+		m.dirId = m.navigation[len(m.navigation)-1].id
+		m.dirName = m.navigation[len(m.navigation)-1].name
+		m.navigation = m.navigation[:len(m.navigation)-1]
+		m.loading = true
+		return m, m.fetchFiles
+	}
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -164,9 +185,13 @@ func (m lsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if !m.loading {
 				selected := m.table.SelectedRow()
 				if len(selected) >= 4 {
+					mimeType := selected[3]
+					if mimeType == "Parent" {
+						return navigateBack(m)
+					}
+
 					id := selected[0]
-					isDir := selected[3] == "application/vnd.google-apps.folder"
-					if isDir {
+					if mimeType == "application/vnd.google-apps.folder" {
 						m.navigation = append(m.navigation, navPair{id: m.dirId, name: m.dirName})
 						m.dirId = id
 						m.dirName = selected[1]
@@ -178,11 +203,7 @@ func (m lsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "backspace":
 			if !m.loading && len(m.navigation) > 0 {
-				m.dirId = m.navigation[len(m.navigation)-1].id
-				m.dirName = m.navigation[len(m.navigation)-1].name
-				m.navigation = m.navigation[:len(m.navigation)-1]
-				m.loading = true
-				return m, m.fetchFiles
+				return navigateBack(m)
 			}
 		}
 
@@ -206,21 +227,19 @@ func (m lsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m lsModel) View() string {
+func (m *lsModel) View() string {
 	if m.err != nil {
 		return utils.ErrorView(m.err, m.width, m.height)
 	}
 
 	if m.loading {
-		return lipgloss.Place(
-			m.width,
-			m.height,
-			lipgloss.Center,
-			lipgloss.Center,
-			fmt.Sprintf("Fetching files for %s directory %s",
+		return utils.LoadingView(
+			fmt.Sprintf("⏳ Fetching files for %s directory %s",
 				m.dirName,
 				m.spinner.View(),
 			),
+			m.width,
+			m.height,
 		)
 	}
 

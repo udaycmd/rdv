@@ -10,9 +10,8 @@ import (
 )
 
 var (
-	RequestTimeoutPeriod                     = 12 * time.Second
-	SpinnerDuration                          = 50 * time.Millisecond
-	Config               *internal.RdvConfig = nil
+	requestTimeoutPeriod                     = 10 * time.Second
+	config               *internal.RdvConfig = nil
 )
 
 var rootCmd = &cobra.Command{
@@ -32,7 +31,7 @@ func Execute() {
 func init() {
 	utils.InitLogger(false)
 	var err error
-	Config, err = internal.LoadCfg()
+	config, err = internal.LoadCfg()
 	if err != nil {
 		utils.Logger.Fatal("can't load config file", "message", err.Error())
 	}
