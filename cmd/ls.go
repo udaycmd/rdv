@@ -18,8 +18,8 @@ var dirId string
 
 var lsCmd = &cobra.Command{
 	Use:   "ls",
-	Short: "list contents of a drive",
-	Long:  "list contents of a drive",
+	Short: "List contents of a drive.",
+	Long:  "List contents of a drive.",
 	Run: func(cmd *cobra.Command, args []string) {
 		d := config.GetSelectedDrive()
 		if d == nil {
@@ -34,7 +34,11 @@ var lsCmd = &cobra.Command{
 			utils.Logger.Fatal("Oops!", "reason", err.Error())
 		}
 
-		p := tea.NewProgram(newLsModel(drive, dirId), tea.WithAltScreen())
+		p := tea.NewProgram(
+			newLsModel(drive, dirId),
+			tea.WithAltScreen(),
+			tea.WithMouseCellMotion(),
+		)
 		if _, err := p.Run(); err != nil {
 			utils.Logger.Fatal("Oops!", "reason", err.Error())
 		}

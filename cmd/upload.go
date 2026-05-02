@@ -16,7 +16,7 @@ var uploadCmd = &cobra.Command{
 	Aliases:               []string{"set"},
 	DisableFlagsInUseLine: true,
 	// PreRun: func(cmd *cobra.Command, args []string) {
-	// 	err := auth()
+	//  err := auth()
 	// 	if err != nil {
 	// 		utils.ExitOnError("Authorization error: " + err.Error())
 	// 	}

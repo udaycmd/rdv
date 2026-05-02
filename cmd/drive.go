@@ -2,8 +2,8 @@ package cmd
 
 import (
 	"fmt"
-	"strings"
 
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
@@ -13,24 +13,10 @@ import (
 	"github.com/udaycmd/rdv/utils"
 )
 
-var (
-	titleStyle    = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#66B3FF"))
-	subtitleStyle = lipgloss.NewStyle().Faint(true)
-	selectedStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#66B3FF")).Bold(true)
-	statusStyle   = lipgloss.NewStyle().Padding(0, 1)
-	revokedStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF6B6B"))
-	activeStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#69DB7C")).Bold(true)
-	defaultStyle  = lipgloss.NewStyle().Faint(true)
-	errorStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF6B6B")).Bold(true)
-	successStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#69DB7C"))
-	cursorStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFB86C"))
-	helpStyle     = lipgloss.NewStyle().Faint(true).MarginTop(1)
-)
-
 var driveCmd = &cobra.Command{
 	Use:   "drive",
-	Short: "Interactive TUI to manage remote drives",
-	Long:  "Launch an interactive terminal UI to add, remove, select, and manage your remote drive connections.",
+	Short: "Manage remote drives.",
+	Long:  "Add, remove, select, and manage your remote drive connections.",
 	Run: func(cmd *cobra.Command, args []string) {
 		p := tea.NewProgram(
 			newDriveModel(config),
@@ -69,15 +55,23 @@ type driveModel struct {
 	state     state
 	cursor    int
 	err       error
+	spinner   spinner.Model
 	message   string
 	loading   string
 	providers []string
+	width     int
+	height    int
 }
 
 func newDriveModel(cfg *internal.RdvConfig) *driveModel {
+	s := spinner.New()
+	s.Spinner = spinner.Dot
+	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("#e0164c"))
+
 	m := &driveModel{
-		config: cfg,
-		state:  stateDefault,
+		config:  cfg,
+		state:   stateDefault,
+		spinner: s,
 	}
 
 	for _, p := range providers.GetAll() {
@@ -103,8 +97,14 @@ func (m *driveModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case authMsg:
 		return m.handleAuthMsg(msg)
 
+	case spinner.TickMsg:
+		var cmd tea.Cmd
+		m.spinner, cmd = m.spinner.Update(msg)
+		return m, cmd
+
 	case tea.WindowSizeMsg:
-		return m, nil
+		m.width = msg.Width
+		m.height = msg.Height
 	}
 
 	return m, nil
@@ -121,11 +121,11 @@ func (m *driveModel) handleAuthMsg(msg authMsg) (tea.Model, tea.Cmd) {
 
 	switch msg.action {
 	case "add":
-		m.message = fmt.Sprintf("✅ Added %s successfully", msg.provider)
+		m.message = fmt.Sprintf("Added %s successfully", msg.provider)
 	case "revoke":
-		m.message = fmt.Sprintf("✅ Disconnected %s successfully", msg.provider)
+		m.message = fmt.Sprintf("Disconnected %s successfully", msg.provider)
 	case "reconnect":
-		m.message = fmt.Sprintf("✅ Reconnected %s successfully", msg.provider)
+		m.message = fmt.Sprintf("Reconnected %s successfully", msg.provider)
 
 		for i := range m.config.Drives {
 			if m.config.Drives[i].Name == msg.provider {
@@ -148,7 +148,7 @@ func (m *driveModel) handleAuthMsg(msg authMsg) (tea.Model, tea.Cmd) {
 func (m *driveModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch m.state {
 	case stateDefault:
-		return m.handleMain(msg)
+		return m.handleDefault(msg)
 
 	case stateAddDrive:
 		return m.handleAddDrive(msg)
@@ -169,7 +169,7 @@ func (m *driveModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *driveModel) handleMain(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m *driveModel) handleDefault(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "q", "ctrl+c":
 		m.state = stateExit
@@ -227,7 +227,7 @@ func (m *driveModel) handleAddDrive(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		providerName := m.providers[m.cursor]
 		m.state = stateLoading
 		m.loading = "Authorizing"
-		return m, authorizeCmd(providerName, m.config, "add")
+		return m, tea.Batch(authorizeCmd(providerName, m.config, "add"), m.spinner.Tick)
 
 	case "up", "k":
 		if m.cursor > 0 {
@@ -268,7 +268,7 @@ func (m *driveModel) handleRevokeDrive(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 		m.state = stateLoading
 		m.loading = fmt.Sprintf("Revoking %s", drive.Name)
-		return m, revokeCmd(drive.Name, m.config)
+		return m, tea.Batch(revokeCmd(drive.Name, m.config), m.spinner.Tick)
 	}
 
 	return m, nil
@@ -295,7 +295,7 @@ func (m *driveModel) handleSelectDrive(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if selected.Status == internal.Revoked {
 			m.state = stateLoading
 			m.loading = fmt.Sprintf("Reconnecting %s", selected.Name)
-			return m, authorizeCmd(selected.Name, m.config, "reconnect")
+			return m, tea.Batch(authorizeCmd(selected.Name, m.config, "reconnect"), m.spinner.Tick)
 		}
 
 		selected.Status = internal.Selected
@@ -335,60 +335,48 @@ func (m *driveModel) handleDone(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func authorizeCmd(providerName string, cfg *internal.RdvConfig, action string) tea.Cmd {
 	return func() tea.Msg {
+		msg := authMsg{
+			err:      nil,
+			provider: providerName,
+			action:   action,
+		}
+
 		p := providers.Get(providerName)
 		if p == nil {
-			return authMsg{
-				err:      fmt.Errorf("%s is not supported", providerName),
-				action:   action,
-				provider: providerName,
-			}
+			msg.err = fmt.Errorf("%s is not supported", providerName)
+			return msg
 		}
 
 		for i, d := range cfg.Drives {
 			if d.Name == providerName {
 				if d.Status == internal.Revoked && action == "reconnect" {
 					if err := oauth.Authorize(p); err != nil {
-						return authMsg{
-							err:      err,
-							provider: providerName,
-							action:   action,
-						}
+						msg.err = err
+						return msg
 					}
 
 					cfg.Drives[i].Status = internal.Default
 					if err := cfg.SaveCfg(); err != nil {
-						return authMsg{
-							err:      err,
-							provider: providerName,
-							action:   action,
-						}
+						msg.err = err
+						return msg
 					}
 
-					return authMsg{
-						err:      nil,
-						provider: providerName,
-						action:   action,
-					}
+					return msg
 				}
 
-				return errMsg(fmt.Errorf("%s is already linked", providerName))
+				msg.err = fmt.Errorf("%s is already linked", providerName)
+				return msg
 			}
 		}
 
 		if action != "add" {
-			return authMsg{
-				err:      fmt.Errorf("invalid action %s for new drive", action),
-				provider: providerName,
-				action:   action,
-			}
+			msg.err = fmt.Errorf("invalid action %s for new drive", action)
+			return msg
 		}
 
 		if err := oauth.Authorize(p); err != nil {
-			return authMsg{
-				err:      err,
-				provider: providerName,
-				action:   action,
-			}
+			msg.err = err
+			return msg
 		}
 
 		config := p.GetConfig()
@@ -399,23 +387,22 @@ func authorizeCmd(providerName string, cfg *internal.RdvConfig, action string) t
 		})
 
 		if err := cfg.SaveCfg(); err != nil {
-			return authMsg{
-				err:      err,
-				provider: providerName,
-				action:   action,
-			}
+			msg.err = err
+			return msg
 		}
 
-		return authMsg{
-			err:      nil,
-			provider: providerName,
-			action:   action,
-		}
+		return msg
 	}
 }
 
 func revokeCmd(providerName string, cfg *internal.RdvConfig) tea.Cmd {
 	return func() tea.Msg {
+		msg := authMsg{
+			err:      nil,
+			provider: providerName,
+			action:   "revoke",
+		}
+
 		found := false
 		for i, d := range cfg.Drives {
 			if d.Name == providerName {
@@ -423,29 +410,21 @@ func revokeCmd(providerName string, cfg *internal.RdvConfig) tea.Cmd {
 
 				switch d.Status {
 				case internal.Revoked:
-					return authMsg{
-						err:      fmt.Errorf("%s already disconnected", providerName),
-						provider: providerName,
-						action:   "revoke",
-					}
+					msg.err = fmt.Errorf("%s already disconnected", providerName)
+					return msg
+
 				default:
 					p := providers.Get(d.Name)
 					err := oauth.RevokeToken(p)
 					if err != nil {
-						return authMsg{
-							err:      err,
-							provider: providerName,
-							action:   "revoke",
-						}
+						msg.err = err
+						return msg
 					}
 
 					cfg.Drives[i].Status = internal.Revoked
 					if err := cfg.SaveCfg(); err != nil {
-						return authMsg{
-							err:      err,
-							provider: providerName,
-							action:   "revoke",
-						}
+						msg.err = err
+						return msg
 					}
 				}
 			}
@@ -454,209 +433,197 @@ func revokeCmd(providerName string, cfg *internal.RdvConfig) tea.Cmd {
 		if !found {
 			p := providers.Get(providerName)
 			if p == nil {
-				return authMsg{
-					err:      fmt.Errorf("%s is not supported by rdv", providerName),
-					provider: providerName,
-					action:   "revoke",
-				}
+				msg.err = fmt.Errorf("%s is not supported by rdv", providerName)
+				return msg
 			}
 
 			// If token is present in keyring but configuration is empty
 			if err := oauth.RevokeToken(p); err != nil {
-				return authMsg{
-					err:      err,
-					provider: providerName,
-					action:   "revoke",
-				}
+				msg.err = err
+				return msg
 			}
 		}
 
-		return authMsg{
-			err:      nil,
-			provider: providerName,
-			action:   "revoke",
-		}
+		return msg
 	}
 }
 
 func (m *driveModel) View() string {
-	var s strings.Builder
+	var s string
 
 	switch m.state {
 	case stateDefault:
-		s.WriteString(m.viewDefault())
+		s = m.viewDefault()
 	case stateAddDrive:
-		s.WriteString(m.viewAddDrive())
+		s = m.viewAddDrive()
 	case stateRevokeDrive:
-		s.WriteString(m.viewRevokeDrive())
+		s = m.viewRevokeDrive()
 	case stateSelectDrive:
-		s.WriteString(m.viewSelectDrive())
+		s = m.viewSelectDrive()
 	case stateLoading:
-		s.WriteString(m.viewLoading())
+		s = utils.LoadingView(
+			fmt.Sprintf("⏳ %s %s",
+				m.loading,
+				m.spinner.View(),
+			),
+			m.width,
+			m.height,
+		)
 	case stateDone:
-		s.WriteString(m.viewDone())
+		s = utils.SuccessView(m.message, m.width, m.height)
 	case stateError:
-		s.WriteString(m.viewError())
+		s = utils.ErrorView(m.err, m.width, m.height)
 	}
 
 	if m.state != stateExit {
-		s.WriteString(m.helpView())
+		s = lipgloss.JoinVertical(
+			lipgloss.Center,
+			s,
+			m.viewHelp(),
+		)
 	}
 
-	return s.String()
+	return lipgloss.Place(
+		m.width,
+		m.height,
+		lipgloss.Center,
+		lipgloss.Top,
+		s,
+	)
 }
 
-// func (m *driveModel) viewDefault() string {
-// 	var b strings.Builder
+var (
+	revokeStyle = lipgloss.NewStyle().Foreground(utils.Destructive).Bold(true)
+	activeStyle = lipgloss.NewStyle().Foreground(utils.Constructive).Bold(true)
+)
 
-// 	// Connected drives section
-// 	b.WriteString("📦 Connected Drives:\n")
-// 	if len(m.config.Drives) == 0 {
-// 		b.WriteString(defaultStyle.Render("   (none connected)") + "\n")
-// 	} else {
-// 		for i, d := range m.config.Drives {
-// 			cursor := "  "
-// 			if i == m.cursor {
-// 				cursor = cursorStyle.Render("❯ ")
-// 			}
+func (m *driveModel) viewDefault() string {
+	var s string
 
-// 			var status string
-// 			switch d.Status {
-// 			case internal.Selected:
-// 				status = activeStyle.Render("[active]")
-// 			case internal.Revoked:
-// 				status = revokedStyle.Render("[disconnected]")
-// 			default:
-// 				status = defaultStyle.Render("[linked]")
-// 			}
+	s = utils.HeaderStyle.Render("🔌 Connected Drives")
+	if len(m.config.Drives) == 0 {
+		return lipgloss.JoinVertical(
+			lipgloss.Center,
+			s,
+			lipgloss.NewStyle().Faint(true).Render("(none)"),
+			activeStyle.Render("press 'a' to connect a remote drive"),
+		)
+	}
 
-// 			b.WriteString(fmt.Sprintf("   %s%-20s %s\n", cursor, d.Name, status))
-// 		}
-// 	}
-// 	b.WriteString("\n")
+	for i, d := range m.config.Drives {
+		cursor := ""
+		if i == m.cursor {
+			cursor = utils.CursorStyle.Render("❯ ")
+		}
 
-// 	// Supported providers preview
-// 	b.WriteString("🔌 Supported Providers: ")
-// 	b.WriteString(defaultStyle.Render(fmt.Sprintf("%d available", len(m.providers))))
-// 	b.WriteString("\n\n")
+		var status string
+		switch d.Status {
+		case internal.Selected:
+			status = activeStyle.Render("(active)")
+		case internal.Revoked:
+			status = revokeStyle.Render("(disconnected)")
+		default:
+			status = lipgloss.NewStyle().Faint(true).Render("(linked)")
+		}
 
-// 	// Status message
-// 	if m.message != "" {
-// 		b.WriteString(successStyle.Render("✓ "+m.message) + "\n\n")
-// 	}
+		s = lipgloss.JoinVertical(
+			lipgloss.Center,
+			s,
+			fmt.Sprintf("%s%s %s", cursor, d.Name, status),
+		)
+	}
 
-// 	return b.String()
-// }
+	return s
+}
 
-// func (m *driveModel) viewAddDrive() string {
-// 	var b strings.Builder
+func (m *driveModel) viewAddDrive() string {
+	var s string
 
-// 	b.WriteString("➕ Add New Drive\n")
-// 	b.WriteString(subtitleStyle.Render("Select a provider to authorize") + "\n\n")
+	s = utils.HeaderStyle.Render("➕ Add New Drive")
 
-// 	if m.search != "" {
-// 		b.WriteString(fmt.Sprintf("Search: %s\n\n", m.search))
-// 	}
+	for i, p := range m.providers {
+		cursor := ""
+		if i == m.cursor {
+			cursor = utils.CursorStyle.Render("❯ ")
+		}
 
-// 	for i, p := range m.filteredProviders {
-// 		cursor := "  "
-// 		if i == m.cursor {
-// 			cursor = cursorStyle.Render("❯ ")
-// 		}
-// 		b.WriteString(fmt.Sprintf("   %s%s\n", cursor, p))
-// 	}
+		s = lipgloss.JoinVertical(
+			lipgloss.Center,
+			s,
+			fmt.Sprintf("%s%s", cursor, p),
+		)
+	}
 
-// 	if len(m.filteredProviders) == 0 {
-// 		b.WriteString(defaultStyle.Render("   No providers match your search") + "\n")
-// 	}
+	return s
+}
 
-// 	return b.String()
-// }
+func (m *driveModel) viewRevokeDrive() string {
+	var s string
 
-// func (m *driveModel) viewRevokeDrive() string {
-// 	var b strings.Builder
+	s = utils.HeaderStyle.Render("🔓 Revoke Drive Access")
 
-// 	b.WriteString("🔓 Revoke Drive Access\n")
-// 	b.WriteString(subtitleStyle.Render("Select a drive to disconnect") + "\n\n")
+	for i, d := range m.config.Drives {
+		cursor := ""
+		if i == m.cursor {
+			cursor = utils.CursorStyle.Render("❯ ")
+		}
 
-// 	for i, d := range m.config.Drives {
-// 		cursor := "  "
-// 		if i == m.cursor {
-// 			cursor = cursorStyle.Render("❯ ")
-// 		}
+		var status string
+		switch d.Status {
+		case internal.Revoked:
+			status = revokeStyle.Render("(already disconnected)")
+		}
 
-// 		var status string
-// 		switch d.Status {
-// 		case internal.Revoked:
-// 			status = revokedStyle.Render("[already disconnected]")
-// 		default:
-// 			status = "✓ linked"
-// 		}
+		s = lipgloss.JoinVertical(
+			lipgloss.Center,
+			s,
+			fmt.Sprintf("%s%s %s", cursor, d.Name, status),
+		)
+	}
 
-// 		b.WriteString(fmt.Sprintf("   %s%-20s %s\n", cursor, d.Name, status))
-// 	}
+	return s
+}
 
-// 	return b.String()
-// }
+func (m *driveModel) viewSelectDrive() string {
+	var s string
 
-// func (m *driveModel) viewSelectDrive() string {
-// 	var b strings.Builder
+	s = utils.HeaderStyle.Render("✅ Select Active Drive")
 
-// 	b.WriteString("🎯 Select Active Drive\n")
-// 	b.WriteString(subtitleStyle.Render("Choose which drive to use") + "\n\n")
+	for i, d := range m.config.Drives {
+		cursor := ""
+		if i == m.cursor {
+			cursor = utils.CursorStyle.Render("❯ ")
+		}
 
-// 	for i, d := range m.config.Drives {
-// 		cursor := "  "
-// 		if i == m.cursor {
-// 			cursor = cursorStyle.Render("❯ ")
-// 		}
+		var status string
+		switch d.Status {
+		case internal.Selected:
+			status = activeStyle.Render("(currently active)")
+		case internal.Revoked:
+			status = revokeStyle.Render("(needs reconnection)")
+		default:
+			status = lipgloss.NewStyle().Faint(true).Render("(linked)")
+		}
 
-// 		var status string
-// 		switch d.Status {
-// 		case internal.Selected:
-// 			status = activeStyle.Render("[currently active]")
-// 		case internal.Revoked:
-// 			status = revokedStyle.Render("[needs reconnection]")
-// 		default:
-// 			status = defaultStyle.Render("[available]")
-// 		}
+		s = lipgloss.JoinVertical(
+			lipgloss.Center,
+			s,
+			fmt.Sprintf("%s%s %s", cursor, d.Name, status),
+		)
+	}
 
-// 		b.WriteString(fmt.Sprintf("   %s%-20s %s\n", cursor, d.Name, status))
-// 	}
+	return s
+}
 
-// 	return b.String()
-// }
-
-// func (m *driveModel) viewLoading() string {
-// 	var b strings.Builder
-// 	b.WriteString("⏳ " + m.loading + "\n\n")
-// 	b.WriteString(defaultStyle.Render("Please complete authorization in your browser...") + "\n")
-// 	return b.String()
-// }
-
-// func (m *driveModel) viewDone() string {
-// 	var b strings.Builder
-// 	b.WriteString(successStyle.Render("✓ "+m.message) + "\n\n")
-// 	b.WriteString(helpStyle.Render("Press any key to continue...") + "\n")
-// 	return b.String()
-// }
-
-// func (m *driveModel) viewError() string {
-// 	var b strings.Builder
-// 	b.WriteString(errorStyle.Render("✗ Error: "+m.err.Error()) + "\n\n")
-// 	b.WriteString(helpStyle.Render("Press any key to continue...") + "\n")
-// 	return b.String()
-// }
-
-func (m *driveModel) helpView() string {
+func (m *driveModel) viewHelp() string {
 	switch m.state {
 	case stateDefault:
-		return helpStyle.Render(
-			"↑↓/j,k: navigate  |  Enter: select  |  a: add  |  r: revoke  |  u: use  |  ?: help  |  q: quit",
+		return utils.HelpStyle.Render(
+			"↑↓/j,k: navigate • Enter: select • a: add • r: revoke • u: use • q: quit",
 		)
 	case stateAddDrive, stateRevokeDrive, stateSelectDrive:
-		return helpStyle.Render(
-			"↑↓/j,k: navigate  |  Enter: confirm  |  Esc: back  |  q: quit",
+		return utils.HelpStyle.Render(
+			"↑↓/j,k: navigate • Enter: confirm • Esc: back",
 		)
 	default:
 		return ""

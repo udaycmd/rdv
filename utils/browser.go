@@ -1,4 +1,3 @@
-// Stolen from https://github.com/pkg/browser/blob/master/browser.go
 package utils
 
 import (
@@ -19,6 +18,7 @@ func OpenFile(path string) error {
 	return OpenURL("file://" + path)
 }
 
+// [https://github.com/pkg/browser/blob/master/browser.go]
 func OpenURL(url string) error {
 	var provider string
 	providers := []string{"xdg-open", "open", "x-www-browser", "www-browser"}
@@ -43,7 +43,7 @@ func OpenURL(url string) error {
 	}
 
 	cmd := exec.Command(provider, url)
-	cmd.Stdout = os.Stdout
+	cmd.Stdout = nil
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
 }
