@@ -631,5 +631,5 @@ func (m *driveModel) viewHelp() string {
 }
 
 func init() {
-	rootCmd.AddCommand(driveCmd)
+	RootCmd.AddCommand(driveCmd)
 }

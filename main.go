@@ -1,7 +1,13 @@
 package main
 
-import "github.com/udaycmd/rdv/cmd"
+import (
+	"github.com/charmbracelet/log"
+	"github.com/udaycmd/rdv/cmd"
+	"github.com/udaycmd/rdv/utils"
+)
 
 func main() {
-	cmd.Execute()
+	if err := cmd.RootCmd.Execute(); err != nil {
+		utils.Logger.Logf(log.FatalLevel, "%s", err.Error())
+	}
 }

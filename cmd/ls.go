@@ -251,6 +251,6 @@ func (m *lsModel) View() string {
 }
 
 func init() {
-	rootCmd.AddCommand(lsCmd)
+	RootCmd.AddCommand(lsCmd)
 	lsCmd.Flags().StringVarP(&dirId, "dir", "d", "root", "unique id of the directory")
 }
