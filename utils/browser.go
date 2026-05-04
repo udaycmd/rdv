@@ -18,7 +18,9 @@ func OpenFile(path string) error {
 	return OpenURL("file://" + path)
 }
 
-// [https://github.com/pkg/browser/blob/master/browser.go]
+// Taken from [here].
+//
+// [here]: https://github.com/pkg/browser/blob/master/browser.go
 func OpenURL(url string) error {
 	var provider string
 	providers := []string{"xdg-open", "open", "x-www-browser", "www-browser"}

@@ -26,6 +26,6 @@ func init() {
 	var err error
 	config, err = internal.LoadCfg()
 	if err != nil {
-		utils.Logger.Fatal("can't load config file", "message", err.Error())
+		utils.Logger.Fatal("can't load config file", "reason", err.Error())
 	}
 }
